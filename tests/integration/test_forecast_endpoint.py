@@ -291,12 +291,3 @@ def test_multivariate_returns_501(client: TestClient):
     assert response.status_code == 501
 
 
-def test_batch_returns_501(client: TestClient):
-    """POST /v1/forecast/batch must return 501."""
-    payload = {
-        "series_list": [
-            {"id": "s1", "values": [float(i) for i in range(10)], "horizon": 3}
-        ]
-    }
-    response = client.post("/v1/forecast/batch", json=payload, headers=HEADERS)
-    assert response.status_code == 501

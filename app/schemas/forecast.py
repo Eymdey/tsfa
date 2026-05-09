@@ -185,6 +185,26 @@ class BatchForecastRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class BatchSeriesResult(BaseModel):
+    """Result for a single series in a batch forecast request."""
+
+    id: str = Field(..., description="Series identifier from the request.")
+    status: Literal["success", "error"] = Field(...)
+    forecast: "ForecastResult | None" = Field(default=None)
+    model_used: str | None = Field(default=None)
+    meta: Meta | None = Field(default=None)
+    error: str | None = Field(default=None)
+
+
+class BatchForecastResponse(BaseModel):
+    """Response for POST /v1/forecast/batch."""
+
+    status: str = Field(default="success")
+    results: list[BatchSeriesResult]
+    total_credits_used: int = Field(..., ge=0)
+    processing_time_ms: float = Field(..., ge=0)
+
+
 class ForecastResult(BaseModel):
     """The forecast values and associated confidence intervals."""
 
@@ -256,3 +276,8 @@ class ForecastResponse(BaseModel):
             }
         }
     }
+
+
+# Resolve forward references now that all models are defined
+BatchSeriesResult.model_rebuild()
+BatchForecastResponse.model_rebuild()

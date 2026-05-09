@@ -31,15 +31,10 @@ def get_plan(request: Request) -> str:
         One of "free", "basic", "pro", "ultra".  Defaults to "free" when no
         recognizable plan header is present.
     """
-    # Production: RapidAPI forwards plan info via X-RapidAPI-User
-    rapidapi_user: str | None = request.headers.get("X-RapidAPI-User")
-    if rapidapi_user:
-        # RapidAPI encodes subscription as part of the user header in some
-        # gateway configurations.  Here we parse the plan from a dedicated
-        # header forwarded by our RapidAPI transformer.
-        plan_header: str | None = request.headers.get("X-RapidAPI-Subscription")
-        if plan_header and plan_header.lower() in VALID_PLANS:
-            return plan_header.lower()
+    # Production: RapidAPI forwards subscription tier via X-RapidAPI-Subscription
+    plan_header: str | None = request.headers.get("X-RapidAPI-Subscription")
+    if plan_header and plan_header.lower() in VALID_PLANS:
+        return plan_header.lower()
 
     # Development / testing fallback
     dev_plan: str | None = request.headers.get("X-Plan")

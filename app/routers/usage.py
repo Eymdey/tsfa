@@ -1,16 +1,15 @@
 """Usage router — GET /v1/usage endpoint.
 
 Returns credit consumption and plan limits for the current billing period.
-Phase 1: returns mocked data. Phase 2: connected to persistent storage.
 """
 
-from datetime import date, timedelta
+from datetime import date
 
 from fastapi import APIRouter, Depends, Request
 
-from app.config import settings
-from app.dependencies import get_plan
+from app.dependencies import get_plan, get_api_key
 from app.schemas.common import UsageResponse
+from app.services.credits import CreditsService
 
 router = APIRouter(prefix="/usage", tags=["Usage"])
 
@@ -20,37 +19,20 @@ router = APIRouter(prefix="/usage", tags=["Usage"])
     response_model=UsageResponse,
     summary="Get current plan usage",
     description=(
-        "Returns credit usage and limits for the current billing period. "
-        "Phase 1: returns mocked data with credits_used=0."
+        "Returns credit usage and limits for the current billing period."
     ),
 )
 async def get_usage(
     request: Request,
     plan: str = Depends(get_plan),
+    api_key: str = Depends(get_api_key),
 ) -> UsageResponse:
-    """Return current credit usage for the caller's plan.
+    """Return current credit usage for the caller's plan."""
+    redis_client = getattr(request.app.state, "redis", None)
+    service = CreditsService(redis_client)
+    usage = await service.get_usage(api_key, plan)
 
-    Args:
-        request: FastAPI Request.
-        plan: Resolved subscription plan.
-
-    Returns:
-        UsageResponse with current period credits and limits.
-    """
-    # Resolve credits limit from config
-    credits_limit_map: dict[str, int] = {
-        "free": settings.plan_free_credits,
-        "basic": settings.plan_basic_credits,
-        "pro": settings.plan_pro_credits,
-        "ultra": settings.plan_ultra_credits,
-    }
-    credits_limit = credits_limit_map.get(plan, settings.plan_free_credits)
-
-    # Phase 1: mocked usage data
     today = date.today()
-    period = today.strftime("%Y-%m")
-
-    # Compute next month's first day as reset date
     if today.month == 12:
         reset_date = date(today.year + 1, 1, 1)
     else:
@@ -58,10 +40,10 @@ async def get_usage(
 
     return UsageResponse(
         plan=plan,
-        period=period,
-        credits_used=0,
-        credits_limit=credits_limit,
-        credits_remaining=credits_limit,
+        period=usage["period"],
+        credits_used=usage["credits_used"],
+        credits_limit=usage["credits_limit"],
+        credits_remaining=usage["credits_remaining"],
         reset_date=str(reset_date),
-        requests_count=0,
+        requests_count=usage["requests_count"],
     )

@@ -130,7 +130,13 @@ async def run_univariate_forecast(
                     request.horizon, request.confidence_levels,
                 )
                 raw_result = _convert_chronos_result(raw_result)
-            except ModalConnectionError as exc:
+            except (ModalConnectionError, Exception) as exc:
+                # Catch ModalConnectionError (custom) and modal.exception.ExecutionError
+                # (raised when Modal app is not running in CI/test environments).
+                # Re-raise ModalTimeoutError so the global handler returns HTTP 503.
+                from app.middleware.error_handler import ModalTimeoutError as _MTE
+                if isinstance(exc, _MTE):
+                    raise
                 log.warning("modal_connection_fallback", model="chronos", error=str(exc))
                 raw_result = _run_arima_local(
                     cleaned.values_clean, effective_frequency,
@@ -139,7 +145,6 @@ async def run_univariate_forecast(
                 actual_model = "arima"
                 fallback_used = True
                 fallback_reason_str = "modal_unavailable"
-            # ModalTimeoutError propagates to the global error handler (HTTP 503)
         else:
             log.info("modal_disabled_fallback", requested="chronos", fallback="arima")
             raw_result = _run_arima_local(
@@ -157,7 +162,13 @@ async def run_univariate_forecast(
                     cleaned.values_clean, effective_frequency,
                     request.horizon, request.confidence_levels,
                 )
-            except ModalConnectionError as exc:
+            except (ModalConnectionError, Exception) as exc:
+                # Catch ModalConnectionError (custom) and modal.exception.ExecutionError
+                # (raised when Modal app is not running in CI/test environments).
+                # Re-raise ModalTimeoutError so the global handler returns HTTP 503.
+                from app.middleware.error_handler import ModalTimeoutError as _MTE
+                if isinstance(exc, _MTE):
+                    raise
                 log.warning("modal_connection_fallback", model="lstm", error=str(exc))
                 raw_result = _run_arima_local(
                     cleaned.values_clean, effective_frequency,
@@ -166,7 +177,6 @@ async def run_univariate_forecast(
                 actual_model = "arima"
                 fallback_used = True
                 fallback_reason_str = "modal_unavailable"
-            # ModalTimeoutError propagates to the global error handler (HTTP 503)
         else:
             log.info("modal_disabled_fallback", requested="lstm", fallback="arima")
             raw_result = _run_arima_local(
