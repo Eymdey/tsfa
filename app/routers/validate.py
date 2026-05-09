@@ -9,7 +9,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from app.dependencies import get_plan
+from app.dependencies import get_plan, verify_rapidapi_proxy
 from app.schemas.validate import ValidateRequest, ValidateResponse
 from app.services.validator import run_backtest
 
@@ -34,6 +34,7 @@ async def validate_model(
     payload: ValidateRequest,
     request: Request,
     plan: str = Depends(get_plan),
+    _: None = Depends(verify_rapidapi_proxy),
 ) -> ValidateResponse:
     """Backtesting endpoint.
 

@@ -5,10 +5,11 @@ import time
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 
-from app.dependencies import get_plan, check_rate_limit
+from app.dependencies import get_plan, check_rate_limit, verify_rapidapi_proxy
+from app.services.credits import PLAN_LIMITS, RATE_LIMITS
 from app.schemas.forecast import (
     UnivariateForecastRequest,
     MultivariateForecastRequest,
@@ -46,8 +47,10 @@ _BATCH_LIMITS: dict[str, int] = {
 async def forecast_univariate(
     payload: UnivariateForecastRequest,
     request: Request,
+    http_response: Response,
     plan: str = Depends(get_plan),
     _: None = Depends(check_rate_limit),
+    __: None = Depends(verify_rapidapi_proxy),
 ) -> ForecastResponse:
     """Generate a univariate time series forecast."""
     redis_client: Any | None = getattr(request.app.state, "redis", None)
@@ -56,6 +59,15 @@ async def forecast_univariate(
     log.info("univariate_forecast_request", horizon=payload.horizon, model=payload.model)
 
     response = await run_univariate_forecast(payload, redis_client)
+
+    credits_used = response.meta.credits_used
+    plan_limit = PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])
+    rate_limit = RATE_LIMITS.get(plan, RATE_LIMITS["free"])
+    http_response.headers["X-Credits-Used"] = str(credits_used)
+    http_response.headers["X-Credits-Remaining"] = str(max(0, plan_limit - credits_used))
+    http_response.headers["X-RateLimit-Limit"] = str(rate_limit)
+    http_response.headers["X-RateLimit-Remaining"] = str(max(0, rate_limit - 1))
+
     return response
 
 
@@ -71,6 +83,7 @@ async def forecast_univariate(
 async def forecast_multivariate(
     payload: MultivariateForecastRequest,
     plan: str = Depends(get_plan),
+    _: None = Depends(verify_rapidapi_proxy),
 ) -> JSONResponse:
     """Multivariate forecast endpoint — Phase 2 stub."""
     return JSONResponse(
@@ -101,6 +114,7 @@ async def forecast_batch(
     payload: BatchForecastRequest,
     request: Request,
     plan: str = Depends(get_plan),
+    _: None = Depends(verify_rapidapi_proxy),
 ) -> BatchForecastResponse:
     """Batch forecast endpoint — runs all series concurrently."""
     # Plan restriction: free and basic cannot use batch

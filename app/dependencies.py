@@ -8,13 +8,48 @@ Also provides API key extraction and Redis-based rate limiting.
 import time
 from typing import Any
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from app.config import settings
 from app.services.credits import RATE_LIMITS
 
 
 VALID_PLANS: set[str] = {"free", "basic", "pro", "ultra"}
+
+
+async def verify_rapidapi_proxy(
+    request: Request,
+    x_rapidapi_proxy_secret: str | None = Header(default=None),
+) -> None:
+    """Validate the RapidAPI proxy secret header.
+
+    In production (ENVIRONMENT=production):
+      - Requires X-RapidAPI-Proxy-Secret == RAPIDAPI_PROXY_SECRET from .env
+      - Missing or incorrect secret → HTTP 403
+    In development (ENVIRONMENT=development):
+      - Skips the check (local/test mode)
+
+    Args:
+        request: The incoming FastAPI Request object.
+        x_rapidapi_proxy_secret: Value of the X-RapidAPI-Proxy-Secret header.
+
+    Raises:
+        HTTPException 403: When in production and the secret is missing or wrong.
+    """
+    if settings.environment != "production":
+        return
+
+    expected = settings.rapidapi_proxy_secret
+    if not expected or x_rapidapi_proxy_secret != expected:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "status": "error",
+                "code": "FORBIDDEN",
+                "message": "Direct API access is not allowed. Use RapidAPI.",
+            },
+        )
 
 
 def get_plan(request: Request) -> str:

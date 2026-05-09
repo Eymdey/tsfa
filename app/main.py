@@ -22,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.config import settings
 from app.middleware.logging import RequestLoggingMiddleware, configure_structlog
@@ -139,6 +140,9 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json",
         lifespan=lifespan,
     )
+
+    # TrustedHost — allow all (RapidAPI forwards from multiple IPs)
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
 
     # GZip compression for responses ≥ 1 KB
     app.add_middleware(GZipMiddleware, minimum_size=1000)

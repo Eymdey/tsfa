@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     api_version: str = "v1"
     debug: bool = False
 
+    # Environment: "development" skips RapidAPI proxy secret check
+    #              "production" enforces it
+    environment: str = "development"
+
+    # Security
+    secret_key: str = ""
+
     # Redis
     redis_url: str = "redis://localhost:6379/0"
     cache_ttl_seconds: int = 900

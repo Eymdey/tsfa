@@ -7,7 +7,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, Request
 
-from app.dependencies import get_plan, get_api_key
+from app.dependencies import get_plan, get_api_key, verify_rapidapi_proxy
 from app.schemas.common import UsageResponse
 from app.services.credits import CreditsService
 
@@ -26,6 +26,7 @@ async def get_usage(
     request: Request,
     plan: str = Depends(get_plan),
     api_key: str = Depends(get_api_key),
+    _: None = Depends(verify_rapidapi_proxy),
 ) -> UsageResponse:
     """Return current credit usage for the caller's plan."""
     redis_client = getattr(request.app.state, "redis", None)
