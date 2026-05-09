@@ -1,0 +1,7 @@
+hertzner:
+ip: 178.105.88.146
+user: dorian
+mdp: Falka1508!
+mdp root: usTRhFd7rFaV
+
+ssh dorian@178.105.88.146
