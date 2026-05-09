@@ -1,52 +1,81 @@
-"""Validate router — /v1/validate endpoint.
+"""Validate router — POST /v1/validate endpoint.
 
-Backtesting / cross-validation of forecasting models.
-Full implementation planned for Phase 1 Week 3.
+Backtesting / cross-validation of forecasting models using
+sliding window evaluation.
 """
 
-from fastapi import APIRouter, Depends
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from app.dependencies import get_plan
-from app.schemas.validate import ValidateRequest
+from app.schemas.validate import ValidateRequest, ValidateResponse
+from app.services.validator import run_backtest
 
 router = APIRouter(prefix="/validate", tags=["Validate"])
 
 
 @router.post(
     "",
-    summary="Backtest a forecasting model (Phase 1 Week 3)",
+    response_model=ValidateResponse,
+    summary="Backtest a forecasting model",
     description=(
-        "Cross-validate a model on historical data and compute MAE, RMSE, MAPE, SMAPE, "
-        "and empirical prediction interval coverage. Coming in Phase 1 Week 3."
+        "Cross-validate a model on historical data using sliding window evaluation. "
+        "Computes MAE, RMSE, MAPE, sMAPE, and empirical prediction interval coverage "
+        "for each window and as aggregate metrics."
     ),
     responses={
-        501: {"description": "Not implemented yet"},
+        422: {"description": "Series too short or invalid request"},
+        429: {"description": "Rate limit or credit limit exceeded"},
     },
-    status_code=501,
 )
 async def validate_model(
     payload: ValidateRequest,
+    request: Request,
     plan: str = Depends(get_plan),
-) -> JSONResponse:
-    """Backtesting endpoint stub.
+) -> ValidateResponse:
+    """Backtesting endpoint.
+
+    Runs sliding-window cross-validation and returns per-window and aggregate metrics.
 
     Args:
         payload: Validated request body.
+        request: FastAPI request (used to access redis from app.state).
         plan: Resolved subscription plan.
 
     Returns:
-        501 JSON response indicating the feature is coming soon.
+        ValidateResponse with backtest_metrics, windows, and meta.
+
+    Raises:
+        HTTPException 422: When the series is too short for the configuration.
     """
-    return JSONResponse(
-        status_code=501,
-        content={
-            "status": "error",
-            "code": "NOT_IMPLEMENTED",
-            "message": (
-                "Backtesting (/v1/validate) is not yet implemented. "
-                "Coming in Phase 1 Week 3."
-            ),
-            "details": None,
-        },
-    )
+    redis_client: Any | None = getattr(request.app.state, "redis", None)
+
+    try:
+        return await run_backtest(payload, redis_client)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "status": "error",
+                "code": "SERIES_TOO_SHORT",
+                "message": str(exc),
+                "details": {
+                    "series_length": len(payload.series),
+                    "horizon": payload.horizon,
+                    "n_windows": payload.n_windows,
+                    "min_required": payload.horizon * payload.n_windows * 2,
+                },
+            },
+        ) from exc
+    except NotImplementedError as exc:
+        raise HTTPException(
+            status_code=501,
+            detail={
+                "status": "error",
+                "code": "NOT_IMPLEMENTED",
+                "message": str(exc),
+                "details": None,
+            },
+        ) from exc

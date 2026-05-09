@@ -46,6 +46,8 @@ class BacktestWindow(BaseModel):
     window: int = Field(..., ge=1)
     mae: float = Field(..., ge=0)
     rmse: float = Field(..., ge=0)
+    mape: float = Field(..., ge=0)
+    smape: float = Field(..., ge=0)
 
 
 class BacktestMetrics(BaseModel):
