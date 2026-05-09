@@ -2,6 +2,12 @@
 
 Coordinates preprocessing, model selection, caching, inference,
 postprocessing, and response assembly for univariate forecasts.
+
+Phase 2 dispatch logic:
+- USE_MODAL=false  → all models fall back to ARIMA locally (dev/CI)
+- USE_MODAL=true   → chronos/lstm dispatched to Modal.com GPU workers
+  - ModalConnectionError → caught here, ARIMA fallback (meta.fallback_used=True)
+  - ModalTimeoutError    → propagates to error handler (HTTP 503)
 """
 
 import hashlib
@@ -13,6 +19,7 @@ from typing import Any
 import structlog
 
 from app.config import settings
+from app.middleware.error_handler import ModalConnectionError, ModalTimeoutError
 from app.schemas.forecast import UnivariateForecastRequest, ForecastResponse, ForecastResult, Diagnostics
 from app.schemas.common import Meta
 from app.services.model_selector import select_model
@@ -36,7 +43,7 @@ async def run_univariate_forecast(
     2. Detect (or use provided) frequency.
     3. Select the best model (auto-selection or explicit).
     4. Check Redis cache for an identical request.
-    5. Run model inference if cache miss.
+    5. Run model inference (local or Modal dispatch).
     6. Compute diagnostics.
     7. Store result in cache.
     8. Assemble and return ForecastResponse.
@@ -49,6 +56,8 @@ async def run_univariate_forecast(
         A complete ForecastResponse.
 
     Raises:
+        NotImplementedError: When tide or ensemble model is requested.
+        ModalTimeoutError: When Modal inference exceeds its timeout.
         ValueError: On data quality issues that cannot be recovered.
     """
     start_time = time.monotonic()
@@ -72,26 +81,20 @@ async def run_univariate_forecast(
         effective_frequency = request.frequency
 
     # 3. Select model
-    requested_model = request.model
-    if requested_model == "auto":
-        has_seasonality = len(cleaned.values_clean) >= 14  # heuristic for auto-detection
-        model_name = select_model(
-            series_length=len(cleaned.values_clean),
-            horizon=request.horizon,
-            has_covariates=False,
-            has_seasonality=has_seasonality,
-            frequency=effective_frequency,
-        )
-    else:
-        # Explicit model requested — still force arima in Phase 1 if not arima
-        if requested_model != "arima":
-            log.warning(
-                "phase1_explicit_model_override",
-                requested=requested_model,
-                forced="arima",
-                reason="Only AutoARIMA is implemented in Phase 1.",
-            )
-        model_name = "arima"
+    model_id, selection_reason = select_model(
+        series_length=len(cleaned.values_clean),
+        horizon=request.horizon,
+        has_covariates=False,
+        frequency=effective_frequency,
+        requested_model=request.model,
+    )
+    log.info("model_selected", model=model_id, reason=selection_reason)
+
+    # Handle Phase 3 stubs immediately (before cache lookup)
+    if model_id == "tide":
+        raise NotImplementedError("TiDE model is available in Phase 3.")
+    if model_id == "ensemble":
+        raise NotImplementedError("Ensemble model is available in Phase 3.")
 
     # 4. Cache lookup
     cache_key = _build_cache_key(request)
@@ -101,20 +104,89 @@ async def run_univariate_forecast(
             if cached:
                 log.info("cache_hit", cache_key=cache_key)
                 response_data = json.loads(cached)
-                # Update request_id and keep fresh inference time from cache marker
                 response_data["meta"]["request_id"] = request_id
                 return ForecastResponse(**response_data)
         except Exception as exc:
             log.warning("cache_read_error", error=str(exc))
 
     # 5. Run inference
-    log.info("inference_started", model=model_name)
-    model = ARIMAModel()
-    model.fit(cleaned.values_clean, effective_frequency)
-    raw_result = model.predict(
-        horizon=request.horizon,
-        confidence_levels=request.confidence_levels,
-    )
+    log.info("inference_started", model=model_id, use_modal=settings.use_modal)
+
+    fallback_used: bool | None = None
+    fallback_reason_str: str | None = None
+    actual_model = model_id
+
+    if model_id == "arima":
+        raw_result = _run_arima_local(
+            cleaned.values_clean, effective_frequency,
+            request.horizon, request.confidence_levels,
+        )
+
+    elif model_id == "chronos":
+        if settings.use_modal:
+            try:
+                raw_result = await _dispatch_chronos(
+                    cleaned.values_clean, effective_frequency,
+                    request.horizon, request.confidence_levels,
+                )
+                raw_result = _convert_chronos_result(raw_result)
+            except ModalConnectionError as exc:
+                log.warning("modal_connection_fallback", model="chronos", error=str(exc))
+                raw_result = _run_arima_local(
+                    cleaned.values_clean, effective_frequency,
+                    request.horizon, request.confidence_levels,
+                )
+                actual_model = "arima"
+                fallback_used = True
+                fallback_reason_str = "modal_unavailable"
+            # ModalTimeoutError propagates to the global error handler (HTTP 503)
+        else:
+            log.info("modal_disabled_fallback", requested="chronos", fallback="arima")
+            raw_result = _run_arima_local(
+                cleaned.values_clean, effective_frequency,
+                request.horizon, request.confidence_levels,
+            )
+            actual_model = "arima"
+            fallback_used = True
+            fallback_reason_str = "modal_unavailable"
+
+    elif model_id == "lstm":
+        if settings.use_modal:
+            try:
+                raw_result = await _dispatch_lstm(
+                    cleaned.values_clean, effective_frequency,
+                    request.horizon, request.confidence_levels,
+                )
+            except ModalConnectionError as exc:
+                log.warning("modal_connection_fallback", model="lstm", error=str(exc))
+                raw_result = _run_arima_local(
+                    cleaned.values_clean, effective_frequency,
+                    request.horizon, request.confidence_levels,
+                )
+                actual_model = "arima"
+                fallback_used = True
+                fallback_reason_str = "modal_unavailable"
+            # ModalTimeoutError propagates to the global error handler (HTTP 503)
+        else:
+            log.info("modal_disabled_fallback", requested="lstm", fallback="arima")
+            raw_result = _run_arima_local(
+                cleaned.values_clean, effective_frequency,
+                request.horizon, request.confidence_levels,
+            )
+            actual_model = "arima"
+            fallback_used = True
+            fallback_reason_str = "modal_unavailable"
+
+    else:
+        # Unknown model — safe fallback
+        log.warning("unknown_model_fallback", model=model_id, fallback="arima")
+        raw_result = _run_arima_local(
+            cleaned.values_clean, effective_frequency,
+            request.horizon, request.confidence_levels,
+        )
+        actual_model = "arima"
+        fallback_used = True
+        fallback_reason_str = "unknown_model"
 
     # 6. Compute diagnostics
     diagnostics_result = compute_diagnostics(
@@ -135,10 +207,9 @@ async def run_univariate_forecast(
     inference_time_ms = (time.monotonic() - start_time) * 1000.0
 
     # Assemble response
-    credits = get_credits_for_model(model_name)
+    credits = get_credits_for_model(actual_model)
 
     def _to_list(arr: Any) -> list[float] | None:
-        """Convert numpy array to Python list, or return None."""
         if arr is None:
             return None
         if hasattr(arr, "tolist"):
@@ -167,11 +238,13 @@ async def run_univariate_forecast(
         inference_time_ms=round(inference_time_ms, 2),
         request_id=request_id,
         credits_used=credits,
+        fallback_used=fallback_used,
+        fallback_reason=fallback_reason_str,
     )
 
     response = ForecastResponse(
         status="success",
-        model_used=model_name,
+        model_used=actual_model,
         forecast=forecast_result,
         diagnostics=diagnostics,
         meta=meta,
@@ -188,12 +261,148 @@ async def run_univariate_forecast(
 
     log.info(
         "forecast_completed",
-        model=model_name,
+        model=actual_model,
+        selected_model=model_id,
+        fallback_used=fallback_used,
         inference_time_ms=round(inference_time_ms, 2),
         credits=credits,
     )
 
     return response
+
+
+# ---------------------------------------------------------------------------
+# Local inference helpers
+# ---------------------------------------------------------------------------
+
+
+def _run_arima_local(
+    values: list[float],
+    frequency: str,
+    horizon: int,
+    confidence_levels: list[float],
+) -> dict:
+    """Run AutoARIMA inference locally via statsforecast.
+
+    Args:
+        values: Cleaned series values.
+        frequency: Resolved frequency string.
+        horizon: Number of steps to forecast.
+        confidence_levels: Confidence interval levels.
+
+    Returns:
+        Dict with mean, lower_80, upper_80, lower_95, upper_95.
+    """
+    model = ARIMAModel()
+    model.fit(values, frequency)
+    return model.predict(horizon=horizon, confidence_levels=confidence_levels)
+
+
+# ---------------------------------------------------------------------------
+# Modal dispatch helpers
+# ---------------------------------------------------------------------------
+
+
+async def _dispatch_chronos(
+    values: list[float],
+    frequency: str,
+    horizon: int,
+    confidence_levels: list[float],
+) -> dict:
+    """Dispatch Chronos inference to Modal.com GPU worker.
+
+    Args:
+        values: Cleaned series values.
+        frequency: Resolved frequency string (unused by Chronos but forwarded).
+        horizon: Number of steps to forecast.
+        confidence_levels: Confidence interval levels.
+
+    Returns:
+        Raw Chronos result dict with mean and quantiles.
+
+    Raises:
+        ModalTimeoutError: If the Modal call exceeds its timeout.
+        ModalConnectionError: If the Modal backend is unreachable.
+    """
+    from ml.modal_app import ChronosWorker
+
+    payload = {
+        "series": values,
+        "horizon": horizon,
+        "confidence_levels": confidence_levels,
+        "num_samples": 20,
+    }
+    return await ChronosWorker().predict.remote(payload)
+
+
+async def _dispatch_lstm(
+    values: list[float],
+    frequency: str,
+    horizon: int,
+    confidence_levels: list[float],
+) -> dict:
+    """Dispatch LSTM inference to Modal.com GPU worker.
+
+    Args:
+        values: Cleaned series values.
+        frequency: Resolved frequency string.
+        horizon: Number of steps to forecast.
+        confidence_levels: Confidence interval levels.
+
+    Returns:
+        Raw LSTM result dict with mean, lower_80, upper_80, lower_95, upper_95.
+
+    Raises:
+        ModalTimeoutError: If the Modal call exceeds its timeout.
+        ModalConnectionError: If the Modal backend is unreachable.
+    """
+    from ml.modal_app import run_lstm
+
+    payload = {
+        "series": values,
+        "horizon": horizon,
+        "frequency": frequency,
+        "confidence_levels": confidence_levels,
+    }
+    return await run_lstm.remote(payload)
+
+
+# ---------------------------------------------------------------------------
+# Result conversion helpers
+# ---------------------------------------------------------------------------
+
+
+def _convert_chronos_result(raw: dict) -> dict:
+    """Convert Chronos quantile format to the standard lower_N/upper_N format.
+
+    Chronos returns:
+        {"mean": [...], "quantiles": {"0.1": [...], "0.9": [...], ...}}
+
+    Standard format expected by ForecastResult:
+        {"mean": [...], "lower_80": [...], "upper_80": [...], ...}
+
+    Args:
+        raw: Raw Chronos result dict.
+
+    Returns:
+        Dict in standard forecast format.
+    """
+    quantiles = raw.get("quantiles", {})
+    result: dict = {"mean": raw["mean"]}
+
+    # Map well-known quantile pairs to named interval fields
+    _QUANTILE_MAP: dict[tuple[str, str], tuple[str, str]] = {
+        ("0.1", "0.9"): ("lower_80", "upper_80"),
+        ("0.025", "0.975"): ("lower_95", "upper_95"),
+        ("0.05", "0.95"): ("lower_90", "upper_90"),
+    }
+    for (lo_key, hi_key), (lo_field, hi_field) in _QUANTILE_MAP.items():
+        if lo_key in quantiles:
+            result[lo_field] = quantiles[lo_key]
+        if hi_key in quantiles:
+            result[hi_field] = quantiles[hi_key]
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -256,5 +465,4 @@ def _build_forecast_timestamps(
         return [str(d.date()) for d in future_dates]
 
     except Exception:
-        # Graceful fallback: return empty list
         return []

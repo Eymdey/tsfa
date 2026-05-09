@@ -2,6 +2,11 @@
 
 Uses FastAPI's TestClient (via httpx) with a mocked Redis state so tests
 run without a real Redis instance.
+
+Phase 2 additions:
+- model="chronos" and model="lstm" with USE_MODAL=false → ARIMA fallback
+  with fallback_used=True in meta
+- GET /v1/models reflects Phase 2 availability
 """
 
 import pytest
@@ -106,11 +111,97 @@ def test_response_meta_has_request_id(client: TestClient):
     assert data["meta"]["request_id"].startswith("req_")
 
 
-def test_model_used_is_arima(client: TestClient):
-    """Phase 1 must always report model_used='arima'."""
+def test_model_used_is_arima_for_short_series(client: TestClient):
+    """12-point series with model='auto' routes to arima (series_too_short_for_lstm rule)."""
     response = client.post("/v1/forecast/univariate", json=VALID_PAYLOAD, headers=HEADERS)
     data = response.json()
     assert data["model_used"] == "arima"
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 — model=chronos and model=lstm with USE_MODAL=false
+# ---------------------------------------------------------------------------
+
+
+def test_explicit_chronos_falls_back_to_arima(client: TestClient):
+    """model='chronos' with USE_MODAL=false returns 200 with model_used='arima'."""
+    payload = {**VALID_PAYLOAD, "model": "chronos"}
+    response = client.post("/v1/forecast/univariate", json=payload, headers=HEADERS)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["model_used"] == "arima"
+
+
+def test_explicit_chronos_fallback_sets_meta_flags(client: TestClient):
+    """model='chronos' with USE_MODAL=false sets fallback_used=True in meta."""
+    payload = {**VALID_PAYLOAD, "model": "chronos"}
+    response = client.post("/v1/forecast/univariate", json=payload, headers=HEADERS)
+    data = response.json()
+    meta = data["meta"]
+    assert meta["fallback_used"] is True
+    assert meta["fallback_reason"] == "modal_unavailable"
+
+
+def test_explicit_lstm_falls_back_to_arima(client: TestClient):
+    """model='lstm' with USE_MODAL=false returns 200 with model_used='arima'."""
+    payload = {**VALID_PAYLOAD, "model": "lstm"}
+    response = client.post("/v1/forecast/univariate", json=payload, headers=HEADERS)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["model_used"] == "arima"
+
+
+def test_explicit_lstm_fallback_sets_meta_flags(client: TestClient):
+    """model='lstm' with USE_MODAL=false sets fallback_used=True in meta."""
+    payload = {**VALID_PAYLOAD, "model": "lstm"}
+    response = client.post("/v1/forecast/univariate", json=payload, headers=HEADERS)
+    data = response.json()
+    meta = data["meta"]
+    assert meta["fallback_used"] is True
+    assert meta["fallback_reason"] == "modal_unavailable"
+
+
+def test_arima_has_no_fallback_flags(client: TestClient):
+    """model='arima' sets fallback_used=None (no fallback occurred)."""
+    payload = {**VALID_PAYLOAD, "model": "arima"}
+    response = client.post("/v1/forecast/univariate", json=payload, headers=HEADERS)
+    data = response.json()
+    meta = data["meta"]
+    assert meta["fallback_used"] is None
+    assert meta["fallback_reason"] is None
+
+
+def test_tide_returns_501(client: TestClient):
+    """model='tide' must return 501 Not Implemented."""
+    # Need a longer series so model_selector doesn't override to arima
+    long_series = list(range(60))
+    payload = {
+        "series": long_series,
+        "horizon": 7,
+        "frequency": "D",
+        "model": "tide",
+    }
+    response = client.post("/v1/forecast/univariate", json=payload, headers=HEADERS)
+    assert response.status_code == 501
+    data = response.json()
+    assert data["code"] == "NOT_IMPLEMENTED"
+
+
+def test_ensemble_returns_501(client: TestClient):
+    """model='ensemble' must return 501 Not Implemented."""
+    long_series = list(range(60))
+    payload = {
+        "series": long_series,
+        "horizon": 7,
+        "frequency": "D",
+        "model": "ensemble",
+    }
+    response = client.post("/v1/forecast/univariate", json=payload, headers=HEADERS)
+    assert response.status_code == 501
+    data = response.json()
+    assert data["code"] == "NOT_IMPLEMENTED"
 
 
 # ---------------------------------------------------------------------------

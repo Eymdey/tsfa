@@ -1,1 +1,44 @@
-{}
+{
+  "generated": "2026-05-08T22:37:59.842442",
+  "results": [
+    {
+      "dataset": "ett_h1",
+      "model": "arima",
+      "horizon": 24,
+      "freq": "h",
+      "local_only": true,
+      "mae": 2.4524,
+      "rmse": 2.9405,
+      "mape": 10.1167,
+      "smape": 10.7415,
+      "n_windows": 5,
+      "timestamp": "2026-05-08T22:37:52.988726"
+    },
+    {
+      "dataset": "exchange_rate",
+      "model": "arima",
+      "horizon": 30,
+      "freq": "B",
+      "local_only": true,
+      "mae": 0.0085,
+      "rmse": 0.01,
+      "mape": 1.1314,
+      "smape": 1.1348,
+      "n_windows": 5,
+      "timestamp": "2026-05-08T22:37:54.546624"
+    },
+    {
+      "dataset": "m5_sample",
+      "model": "arima",
+      "horizon": 14,
+      "freq": "D",
+      "local_only": true,
+      "mae": 9.0427,
+      "rmse": 10.5617,
+      "mape": 7.6337,
+      "smape": 7.4284,
+      "n_windows": 5,
+      "timestamp": "2026-05-08T22:37:59.842280"
+    }
+  ]
+}

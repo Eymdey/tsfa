@@ -1,7 +1,7 @@
-"""Unit tests for the model selection logic.
+"""Unit tests for the model selection logic — Phase 2.
 
 Tests the select_model() function from app/services/model_selector.py.
-In Phase 1, all non-arima selections are overridden to 'arima'.
+Returns (model_id, reason) tuple. 7 priority rules.
 """
 
 import pytest
@@ -10,128 +10,241 @@ from app.services.model_selector import select_model
 
 
 # ---------------------------------------------------------------------------
-# Phase 1 override tests — all results must be 'arima'
+# Rule 1 — explicit model request
 # ---------------------------------------------------------------------------
 
 
-def test_short_series_returns_arima():
-    """Series with fewer than 30 obs must return 'arima' (spec rule 1)."""
-    result = select_model(
-        series_length=15,
-        horizon=7,
-        has_covariates=False,
-        has_seasonality=False,
-        frequency="D",
-    )
-    assert result == "arima"
-
-
-def test_has_covariates_phase1_returns_arima():
-    """Has covariates selects 'tide' per spec, but Phase 1 forces 'arima'."""
-    result = select_model(
-        series_length=50,
-        horizon=7,
-        has_covariates=True,
-        has_seasonality=False,
-        frequency="D",
-    )
-    # Phase 1 override: tide → arima
-    assert result == "arima"
-
-
-def test_long_series_short_horizon_phase1_returns_arima():
-    """Long series + short horizon selects 'chronos' per spec, Phase 1 forces 'arima'."""
-    result = select_model(
+def test_explicit_arima_request():
+    """Explicit model='arima' is returned regardless of series characteristics."""
+    model_id, reason = select_model(
         series_length=200,
         horizon=30,
         has_covariates=False,
-        has_seasonality=True,
         frequency="D",
+        requested_model="arima",
     )
-    # Phase 1 override: chronos → arima
-    assert result == "arima"
+    assert model_id == "arima"
+    assert reason == "explicit_request"
 
 
-def test_long_horizon_phase1_returns_arima():
-    """Horizon > 90 + long series selects 'lstm' per spec, Phase 1 forces 'arima'."""
-    result = select_model(
-        series_length=100,
-        horizon=120,
+def test_explicit_chronos_request():
+    """Explicit model='chronos' is returned directly."""
+    model_id, reason = select_model(
+        series_length=5,
+        horizon=7,
         has_covariates=False,
-        has_seasonality=False,
         frequency="D",
+        requested_model="chronos",
     )
-    # Phase 1 override: lstm → arima
-    assert result == "arima"
+    assert model_id == "chronos"
+    assert reason == "explicit_request"
 
 
-def test_default_case_phase1_returns_arima():
-    """Default case selects 'chronos' per spec, Phase 1 forces 'arima'."""
-    result = select_model(
-        series_length=60,
-        horizon=30,
+def test_explicit_lstm_request():
+    """Explicit model='lstm' is returned directly."""
+    model_id, reason = select_model(
+        series_length=5,
+        horizon=7,
         has_covariates=False,
-        has_seasonality=False,
         frequency="D",
+        requested_model="lstm",
     )
-    # Phase 1 override: chronos → arima
-    assert result == "arima"
+    assert model_id == "lstm"
+    assert reason == "explicit_request"
 
 
 # ---------------------------------------------------------------------------
-# Direct arima selection (no override needed)
+# Rule 2 — series too short for Chronos (< 12)
 # ---------------------------------------------------------------------------
 
 
-def test_arima_selected_directly_for_very_short_series():
-    """Series of exactly 10 observations should directly return 'arima'."""
-    result = select_model(
+def test_series_length_10_returns_arima():
+    """10 observations → arima (series_too_short_for_chronos)."""
+    model_id, reason = select_model(
         series_length=10,
         horizon=3,
         has_covariates=False,
-        has_seasonality=False,
         frequency="D",
     )
-    assert result == "arima"
+    assert model_id == "arima"
+    assert reason == "series_too_short_for_chronos"
 
 
-def test_arima_selected_for_series_length_29():
-    """Series of 29 observations (< 30) should return 'arima'."""
-    result = select_model(
+def test_series_length_11_returns_arima():
+    """11 observations → arima (series_too_short_for_chronos)."""
+    model_id, reason = select_model(
+        series_length=11,
+        horizon=7,
+        has_covariates=False,
+        frequency="D",
+    )
+    assert model_id == "arima"
+    assert reason == "series_too_short_for_chronos"
+
+
+# ---------------------------------------------------------------------------
+# Rule 3 — series too short for LSTM (12 ≤ length < 30)
+# ---------------------------------------------------------------------------
+
+
+def test_series_length_12_returns_arima():
+    """12 observations → arima (series_too_short_for_lstm)."""
+    model_id, reason = select_model(
+        series_length=12,
+        horizon=7,
+        has_covariates=False,
+        frequency="D",
+    )
+    assert model_id == "arima"
+    assert reason == "series_too_short_for_lstm"
+
+
+def test_series_length_29_returns_arima():
+    """29 observations → arima (series_too_short_for_lstm)."""
+    model_id, reason = select_model(
         series_length=29,
         horizon=7,
         has_covariates=False,
-        has_seasonality=False,
         frequency="D",
     )
-    assert result == "arima"
+    assert model_id == "arima"
+    assert reason == "series_too_short_for_lstm"
 
 
 # ---------------------------------------------------------------------------
-# Edge cases
+# Rule 4 — covariates present → tide
 # ---------------------------------------------------------------------------
 
 
-def test_series_length_30_with_covariates_phase1():
-    """Exactly 30 obs with covariates: would be 'tide', Phase 1 gives 'arima'."""
-    result = select_model(
-        series_length=30,
-        horizon=7,
+def test_covariates_returns_tide():
+    """has_covariates=True with long series → tide."""
+    model_id, reason = select_model(
+        series_length=50,
+        horizon=30,
         has_covariates=True,
-        has_seasonality=True,
-        frequency="W",
+        frequency="D",
     )
-    assert result == "arima"
+    assert model_id == "tide"
+    assert reason == "covariates_present"
 
 
-def test_various_frequencies_all_return_arima():
-    """All frequency strings should produce 'arima' in Phase 1."""
-    for freq in ["T", "H", "D", "W", "M", "Q", "Y", "auto"]:
-        result = select_model(
-            series_length=200,
-            horizon=90,
+# ---------------------------------------------------------------------------
+# Rule 5 — long series + short horizon → chronos
+# ---------------------------------------------------------------------------
+
+
+def test_long_series_short_horizon_returns_chronos():
+    """series_length=100, horizon=30 → chronos."""
+    model_id, reason = select_model(
+        series_length=100,
+        horizon=30,
+        has_covariates=False,
+        frequency="D",
+    )
+    assert model_id == "chronos"
+    assert reason == "long_series_short_horizon"
+
+
+def test_series_length_200_horizon_90_returns_chronos():
+    """series_length=200, horizon=90 (boundary) → chronos."""
+    model_id, reason = select_model(
+        series_length=200,
+        horizon=90,
+        has_covariates=False,
+        frequency="D",
+    )
+    assert model_id == "chronos"
+    assert reason == "long_series_short_horizon"
+
+
+# ---------------------------------------------------------------------------
+# Rule 6 — long horizon → lstm
+# ---------------------------------------------------------------------------
+
+
+def test_long_horizon_returns_lstm():
+    """horizon=120, series_length=50 → lstm."""
+    model_id, reason = select_model(
+        series_length=50,
+        horizon=120,
+        has_covariates=False,
+        frequency="D",
+    )
+    assert model_id == "lstm"
+    assert reason == "long_horizon"
+
+
+def test_horizon_91_series_50_returns_lstm():
+    """horizon=91 (boundary above 90), series_length=50 → lstm."""
+    model_id, reason = select_model(
+        series_length=50,
+        horizon=91,
+        has_covariates=False,
+        frequency="D",
+    )
+    assert model_id == "lstm"
+    assert reason == "long_horizon"
+
+
+# ---------------------------------------------------------------------------
+# Rule 7 — default → chronos
+# ---------------------------------------------------------------------------
+
+
+def test_default_case_returns_chronos():
+    """series_length=60, horizon=30 (no other rule matches) → chronos."""
+    model_id, reason = select_model(
+        series_length=60,
+        horizon=30,
+        has_covariates=False,
+        frequency="D",
+    )
+    assert model_id == "chronos"
+    assert reason == "default"
+
+
+def test_default_case_series_99_horizon_30():
+    """series_length=99 (< 100, rule 5 doesn't apply), horizon=30 → chronos (default)."""
+    model_id, reason = select_model(
+        series_length=99,
+        horizon=30,
+        has_covariates=False,
+        frequency="D",
+    )
+    assert model_id == "chronos"
+    assert reason == "default"
+
+
+# ---------------------------------------------------------------------------
+# Return type validation
+# ---------------------------------------------------------------------------
+
+
+def test_returns_tuple_of_two_strings():
+    """select_model() always returns a (str, str) tuple."""
+    result = select_model(
+        series_length=50,
+        horizon=10,
+        has_covariates=False,
+        frequency="D",
+    )
+    assert isinstance(result, tuple)
+    assert len(result) == 2
+    assert all(isinstance(v, str) for v in result)
+
+
+# ---------------------------------------------------------------------------
+# Frequency doesn't affect model selection logic
+# ---------------------------------------------------------------------------
+
+
+def test_various_frequencies_long_series_short_horizon():
+    """Frequency string doesn't change rule 5 outcome."""
+    for freq in ["H", "D", "W", "M", "Q"]:
+        model_id, _ = select_model(
+            series_length=100,
+            horizon=30,
             has_covariates=False,
-            has_seasonality=True,
             frequency=freq,
         )
-        assert result == "arima", f"Expected 'arima' for frequency={freq}, got '{result}'"
+        assert model_id == "chronos", f"Expected chronos for freq={freq}, got {model_id}"

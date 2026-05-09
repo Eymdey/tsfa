@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     modal_token_id: str = ""
     modal_token_secret: str = ""
     modal_app_name: str = "tsfa-inference"
+    use_modal: bool = False
 
     # RapidAPI
     rapidapi_proxy_secret: str = ""

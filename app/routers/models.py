@@ -1,7 +1,7 @@
 """Models router — GET /v1/models endpoint.
 
 Returns the static catalogue of forecasting models, their characteristics,
-and availability status. In Phase 1, only AutoARIMA is available=true.
+and availability status. Phase 2: AutoARIMA, Chronos, and LSTM are available.
 """
 
 from fastapi import APIRouter
@@ -29,29 +29,32 @@ _MODEL_CATALOGUE: list[ModelInfo] = [
         max_horizon=180,
         avg_inference_ms=80,
         credits_per_call=1,
-        available=True,  # Phase 1 — only operational model
+        available=True,
+        backend="local",
     ),
     ModelInfo(
         id="chronos",
         name="Chronos-T5 (Small)",
         type="foundation_model",
         best_for=["univariate", "zero-shot", "general purpose"],
-        min_series_length=10,
+        min_series_length=12,
         max_horizon=365,
         avg_inference_ms=250,
         credits_per_call=1,
-        available=False,  # Phase 2
+        available=True,
+        backend="modal",
     ),
     ModelInfo(
         id="lstm",
         name="LSTM Custom (fine-tuned)",
         type="deep_learning",
-        best_for=["noisy series", "non-linear patterns"],
+        best_for=["noisy series", "non-linear patterns", "long horizons"],
         min_series_length=30,
         max_horizon=90,
         avg_inference_ms=320,
         credits_per_call=2,
-        available=False,  # Phase 2
+        available=True,
+        backend="modal",
     ),
     ModelInfo(
         id="tide",
@@ -62,7 +65,9 @@ _MODEL_CATALOGUE: list[ModelInfo] = [
         max_horizon=365,
         avg_inference_ms=400,
         credits_per_call=3,
-        available=False,  # Phase 2
+        available=False,
+        backend="modal",
+        coming="phase_3",
     ),
     ModelInfo(
         id="ensemble",
@@ -73,7 +78,9 @@ _MODEL_CATALOGUE: list[ModelInfo] = [
         max_horizon=180,
         avg_inference_ms=650,
         credits_per_call=5,
-        available=False,  # Phase 2
+        available=False,
+        backend="modal",
+        coming="phase_3",
     ),
 ]
 
@@ -84,7 +91,7 @@ _MODEL_CATALOGUE: list[ModelInfo] = [
     summary="List available forecasting models",
     description=(
         "Returns all models in the catalogue with their specifications and "
-        "current availability status. In Phase 1, only AutoARIMA is available."
+        "current availability status. Phase 2: AutoARIMA, Chronos, and LSTM are available."
     ),
 )
 async def list_models() -> ModelsResponse:
