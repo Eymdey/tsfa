@@ -26,8 +26,10 @@ router = APIRouter(prefix="/validate", tags=["Validate"])
         "for each window and as aggregate metrics."
     ),
     responses={
+        403: {"description": "Missing or invalid RapidAPI proxy secret"},
         422: {"description": "Series too short or invalid request"},
         429: {"description": "Rate limit or credit limit exceeded"},
+        503: {"description": "Inference backend temporarily unavailable"},
     },
 )
 async def validate_model(

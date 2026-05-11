@@ -31,7 +31,7 @@ curl http://localhost:8000/health
 Expected response:
 
 ```json
-{"status": "ok", "version": "1.0.0"}
+{"status": "ok", "version": "1.0.0", "redis_connected": true, "uptime_seconds": 12.3}
 ```
 
 ---

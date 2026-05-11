@@ -2,8 +2,93 @@
 
 Professional REST API for time series forecasting. Get point forecasts with confidence intervals in 3 lines of code.
 
-**Phase 1:** AutoARIMA (statsforecast) — fast, statistical, interpretable.  
-**Phase 2:** Chronos-T5-Small, LSTM, TiDE, Ensemble (GPU via Modal.com).
+![Tests](https://img.shields.io/badge/tests-165%20passing-brightgreen)
+[![RapidAPI](https://img.shields.io/badge/RapidAPI-Available-blue)](https://rapidapi.com/hub)
+
+---
+
+## Quick Start
+
+```bash
+curl -X POST https://tsfa.p.rapidapi.com/v1/forecast/univariate \
+  -H "Content-Type: application/json" \
+  -H "X-RapidAPI-Key: YOUR_KEY" \
+  -H "X-RapidAPI-Host: tsfa.p.rapidapi.com" \
+  -d '{
+    "series": [100, 102, 98, 105, 103, 107, 104, 109, 106, 111],
+    "horizon": 7,
+    "frequency": "D",
+    "model": "auto"
+  }'
+```
+
+Or run locally:
+
+```bash
+git clone https://github.com/Eymdey/tsfa.git
+cd tsfa
+cp .env.example .env
+docker compose up --build
+curl -X POST http://localhost:8000/v1/forecast/univariate \
+  -H "Content-Type: application/json" -H "X-Plan: free" \
+  -d '{"series":[100,102,98,105,103,107,104,109,106,111],"horizon":7,"frequency":"D","model":"auto"}'
+```
+
+---
+
+## Models
+
+| Model | Type | Best for | Horizon | Credits/call |
+|---|---|---|---|---|
+| **AutoARIMA** | Statistical | Short series, interpretability | ≤180 days | 1 |
+| **Chronos-T5** | Foundation model | Zero-shot, general purpose | ≤365 days | 1 |
+| **LSTM** | Deep learning | Noisy, non-linear, long horizon | ≤365 days | 2 |
+| TiDE *(Phase 3)* | Deep learning | Multivariate with covariates | ≤365 days | 3 |
+| Ensemble *(Phase 3)* | Ensemble | Highest accuracy | ≤180 days | 5 |
+
+Auto-selection logic:
+- Series ≥ 30 obs AND horizon ≤ 90 → **Chronos**
+- Horizon > 90 → **LSTM**
+- Otherwise → **AutoARIMA**
+
+---
+
+## Benchmarks
+
+Results on public datasets (rolling-window backtesting, 5 windows):
+
+| Dataset | Frequency | Model | MAE | RMSE | MAPE |
+|---|---|---|---|---|---|
+| ETT-h1 | Hourly | AutoARIMA | 2.4524 | 2.9405 | 10.12% |
+| Exchange Rate | Daily | AutoARIMA | 0.0085 | 0.0100 | 1.13% |
+| M5 Sample | Daily | AutoARIMA | 9.0427 | 10.5617 | 7.63% |
+
+See [benchmarks/results/README.md](benchmarks/results/README.md) for full methodology.
+
+---
+
+## API Endpoints
+
+| Method | Path | Status | Description |
+|---|---|---|---|
+| `POST` | `/v1/forecast/univariate` | **Live** | Single series forecast |
+| `POST` | `/v1/forecast/batch` | **Live** | Multiple series at once (Pro/Ultra) |
+| `POST` | `/v1/validate` | **Live** | Backtesting / cross-validation |
+| `POST` | `/v1/forecast/multivariate` | Phase 3 | Forecast with covariates (TiDE) |
+| `GET` | `/v1/models` | **Live** | List available models |
+| `GET` | `/v1/usage` | **Live** | Credit usage and limits |
+| `GET` | `/health` | **Live** | Health check |
+
+---
+
+## Plans and Credits
+
+| Plan | Price/month | Credits/month | Max horizon | Batch |
+|---|---|---|---|---|
+| Free | $0 | 500 | 30 | ❌ |
+| Basic | $49 | 10,000 | 90 | ❌ |
+| Pro | $199 | 50,000 | 365 | ✅ (50 series) |
+| Ultra | $499 | 200,000 | 365 | ✅ (500 series) |
 
 ---
 
@@ -14,22 +99,7 @@ Professional REST API for time series forecasting. Get point forecasts with conf
 
 ---
 
-## Quick start
-
-```bash
-git clone https://github.com/youruser/tsfa.git
-cd tsfa
-cp .env.example .env
-docker compose up --build
-```
-
-The API is available at `http://localhost:8000`.
-
-Interactive docs: `http://localhost:8000/docs`
-
----
-
-## Environment variables
+## Environment Variables
 
 Copy `.env.example` to `.env` and adjust as needed:
 
@@ -37,74 +107,14 @@ Copy `.env.example` to `.env` and adjust as needed:
 |---|---|---|
 | `API_HOST` | `0.0.0.0` | Bind address |
 | `API_PORT` | `8000` | Listen port |
-| `DEBUG` | `false` | Enable debug mode (relaxed CORS) |
+| `DEBUG` | `false` | Enable debug mode |
 | `REDIS_URL` | `redis://redis:6379/0` | Redis connection URL |
 | `CACHE_TTL_SECONDS` | `900` | Result cache duration (15 min) |
-| `SENTRY_DSN` | `` | Sentry error tracking DSN (optional) |
-| `PLAN_FREE_CREDITS` | `500` | Monthly credits for free tier |
-| `PLAN_BASIC_CREDITS` | `10000` | Monthly credits for basic tier |
-| `PLAN_PRO_CREDITS` | `50000` | Monthly credits for pro tier |
-| `PLAN_ULTRA_CREDITS` | `200000` | Monthly credits for ultra tier |
+| `USE_MODAL` | `false` | Enable Modal.com GPU inference |
+| `ENVIRONMENT` | `development` | `production` enforces proxy secret |
+| `SENTRY_DSN` | `` | Sentry error tracking (optional) |
 
 ---
-
-## API endpoints
-
-| Method | Path | Status | Description |
-|---|---|---|---|
-| `POST` | `/v1/forecast/univariate` | Live | Single series forecast |
-| `POST` | `/v1/forecast/multivariate` | Phase 2 | Forecast with covariates |
-| `POST` | `/v1/forecast/batch` | Phase 2 | Multiple series at once |
-| `POST` | `/v1/validate` | Phase 1 W3 | Backtesting / cross-validation |
-| `GET` | `/v1/models` | Live | List available models |
-| `GET` | `/v1/usage` | Live | Credit usage and limits |
-| `GET` | `/health` | Live | Health check |
-
----
-
-## Example — curl
-
-```bash
-curl -X POST http://localhost:8000/v1/forecast/univariate \
-  -H "Content-Type: application/json" \
-  -H "X-Plan: free" \
-  -d '{
-    "series": [120, 132, 128, 145, 139, 152, 148, 160, 155, 168, 163, 175],
-    "horizon": 7,
-    "frequency": "D",
-    "model": "auto"
-  }'
-```
-
-Expected response:
-
-```json
-{
-  "status": "success",
-  "model_used": "arima",
-  "forecast": {
-    "timestamps": ["2024-01-13", "2024-01-14", "..."],
-    "mean": [178.2, 181.5, 184.8, 188.1, 191.4, 194.7, 198.0],
-    "lower_80": ["..."],
-    "upper_80": ["..."],
-    "lower_95": ["..."],
-    "upper_95": ["..."]
-  },
-  "diagnostics": {
-    "trend": "upward",
-    "seasonality_detected": false,
-    "seasonality_period": null,
-    "series_length": 12,
-    "missing_values": 0,
-    "stationarity": "non_stationary"
-  },
-  "meta": {
-    "inference_time_ms": 234.0,
-    "request_id": "req_abc123",
-    "credits_used": 1
-  }
-}
-```
 
 ## Example — Python
 
@@ -115,7 +125,7 @@ response = requests.post(
     "http://localhost:8000/v1/forecast/univariate",
     headers={"X-Plan": "free"},
     json={
-        "series": [120, 132, 128, 145, 139, 152, 148, 160, 155, 168, 163, 175],
+        "series": [100, 102, 98, 105, 103, 107, 104, 109, 106, 111],
         "horizon": 7,
         "frequency": "D",
         "model": "auto",
@@ -123,42 +133,20 @@ response = requests.post(
 )
 data = response.json()
 print(data["forecast"]["mean"])
+# [112.3, 113.1, 112.8, 114.2, 113.9, 115.1, 114.7]
 ```
 
 ---
 
-## Plans and credits
-
-| Plan | Price/month | Credits/month | Max horizon |
-|---|---|---|---|
-| Free | $0 | 500 | 30 |
-| Basic | $49 | 10,000 | 90 |
-| Pro | $199 | 50,000 | 365 |
-| Ultra | $499 | 200,000 | 365 |
-
-Credits consumed per call:
-- AutoARIMA: 1 credit
-- Chronos: 1 credit (Phase 2)
-- LSTM: 2 credits (Phase 2)
-- TiDE: 3 credits (Phase 2)
-- Ensemble: 5 credits (Phase 2)
-
----
-
-## Running tests
+## Running Tests
 
 ```bash
-# Install dependencies (without Docker)
+# With Docker (recommended)
+docker compose run --rm api pytest tests/ -v
+
+# Local (requires Python 3.11+)
 pip install -r requirements.txt
-
-# Run all tests
 pytest tests/ -v
-
-# Run only unit tests
-pytest tests/unit/ -v
-
-# Run only integration tests
-pytest tests/integration/ -v
 ```
 
 ---
@@ -172,9 +160,11 @@ cp .env.example .env
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+Interactive docs: `http://localhost:8000/docs`
+
 ---
 
-## Project structure
+## Project Structure
 
 ```
 tsfa/

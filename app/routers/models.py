@@ -91,8 +91,11 @@ _MODEL_CATALOGUE: list[ModelInfo] = [
     summary="List available forecasting models",
     description=(
         "Returns all models in the catalogue with their specifications and "
-        "current availability status. Phase 2: AutoARIMA, Chronos, and LSTM are available."
+        "current availability status. AutoARIMA, Chronos, and LSTM are available."
     ),
+    responses={
+        503: {"description": "Service temporarily unavailable"},
+    },
 )
 async def list_models() -> ModelsResponse:
     """Return the static model catalogue.

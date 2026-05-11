@@ -1,5 +1,5 @@
 {
-  "generated": "2026-05-08T22:37:59.842442",
+  "generated": "2026-05-11T15:08:45.645196",
   "results": [
     {
       "dataset": "ett_h1",
@@ -12,7 +12,46 @@
       "mape": 10.1167,
       "smape": 10.7415,
       "n_windows": 5,
-      "timestamp": "2026-05-08T22:37:52.988726"
+      "timestamp": "2026-05-11T15:08:30.573794"
+    },
+    {
+      "dataset": "ett_h1",
+      "model": "naive",
+      "horizon": 24,
+      "freq": "h",
+      "local_only": true,
+      "mae": 2.4524,
+      "rmse": 2.9405,
+      "mape": 10.1167,
+      "smape": 10.7415,
+      "n_windows": 5,
+      "timestamp": "2026-05-11T15:08:30.574520"
+    },
+    {
+      "dataset": "ett_h1",
+      "model": "seasonal_naive",
+      "horizon": 24,
+      "freq": "h",
+      "local_only": true,
+      "mae": 1.9263,
+      "rmse": 2.2837,
+      "mape": 8.2541,
+      "smape": 8.7383,
+      "n_windows": 5,
+      "timestamp": "2026-05-11T15:08:30.575244"
+    },
+    {
+      "dataset": "ett_h1",
+      "model": "chronos",
+      "horizon": 24,
+      "freq": "h",
+      "local_only": true,
+      "mae": 2.4524,
+      "rmse": 2.9405,
+      "mape": 10.1167,
+      "smape": 10.7415,
+      "n_windows": 5,
+      "timestamp": "2026-05-11T15:08:32.317020"
     },
     {
       "dataset": "exchange_rate",
@@ -25,7 +64,46 @@
       "mape": 1.1314,
       "smape": 1.1348,
       "n_windows": 5,
-      "timestamp": "2026-05-08T22:37:54.546624"
+      "timestamp": "2026-05-11T15:08:33.887670"
+    },
+    {
+      "dataset": "exchange_rate",
+      "model": "naive",
+      "horizon": 30,
+      "freq": "B",
+      "local_only": true,
+      "mae": 0.0085,
+      "rmse": 0.01,
+      "mape": 1.1314,
+      "smape": 1.1348,
+      "n_windows": 5,
+      "timestamp": "2026-05-11T15:08:33.888315"
+    },
+    {
+      "dataset": "exchange_rate",
+      "model": "seasonal_naive",
+      "horizon": 30,
+      "freq": "B",
+      "local_only": true,
+      "mae": 0.0103,
+      "rmse": 0.0117,
+      "mape": 1.3734,
+      "smape": 1.3749,
+      "n_windows": 5,
+      "timestamp": "2026-05-11T15:08:33.889190"
+    },
+    {
+      "dataset": "exchange_rate",
+      "model": "chronos",
+      "horizon": 30,
+      "freq": "B",
+      "local_only": true,
+      "mae": 0.0085,
+      "rmse": 0.01,
+      "mape": 1.1314,
+      "smape": 1.1348,
+      "n_windows": 5,
+      "timestamp": "2026-05-11T15:08:35.461310"
     },
     {
       "dataset": "m5_sample",
@@ -38,7 +116,46 @@
       "mape": 7.6337,
       "smape": 7.4284,
       "n_windows": 5,
-      "timestamp": "2026-05-08T22:37:59.842280"
+      "timestamp": "2026-05-11T15:08:40.617546"
+    },
+    {
+      "dataset": "m5_sample",
+      "model": "naive",
+      "horizon": 14,
+      "freq": "D",
+      "local_only": true,
+      "mae": 14.3541,
+      "rmse": 16.7054,
+      "mape": 11.4515,
+      "smape": 11.7407,
+      "n_windows": 5,
+      "timestamp": "2026-05-11T15:08:40.618226"
+    },
+    {
+      "dataset": "m5_sample",
+      "model": "seasonal_naive",
+      "horizon": 14,
+      "freq": "D",
+      "local_only": true,
+      "mae": 5.0372,
+      "rmse": 6.2019,
+      "mape": 4.2397,
+      "smape": 4.1772,
+      "n_windows": 5,
+      "timestamp": "2026-05-11T15:08:40.618924"
+    },
+    {
+      "dataset": "m5_sample",
+      "model": "chronos",
+      "horizon": 14,
+      "freq": "D",
+      "local_only": true,
+      "mae": 9.0427,
+      "rmse": 10.5617,
+      "mape": 7.6337,
+      "smape": 7.4284,
+      "n_windows": 5,
+      "timestamp": "2026-05-11T15:08:45.645100"
     }
   ]
 }

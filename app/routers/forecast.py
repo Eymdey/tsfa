@@ -41,7 +41,10 @@ _BATCH_LIMITS: dict[str, int] = {
     ),
     responses={
         400: {"description": "Invalid input data"},
-        422: {"description": "Validation error"},
+        403: {"description": "Missing or invalid RapidAPI proxy secret"},
+        422: {"description": "Validation error — series too short, invalid horizon, etc."},
+        429: {"description": "Rate limit or credit limit exceeded"},
+        503: {"description": "Inference backend temporarily unavailable (Modal timeout)"},
     },
 )
 async def forecast_univariate(
@@ -106,8 +109,10 @@ async def forecast_multivariate(
         "Available for Pro (max 50 series) and Ultra (max 500 series) plans."
     ),
     responses={
-        403: {"description": "Plan does not support batch forecasting"},
-        422: {"description": "Too many series for plan"},
+        403: {"description": "Plan does not support batch forecasting (requires Pro or Ultra)"},
+        422: {"description": "Too many series for plan, or invalid request"},
+        429: {"description": "Rate limit or credit limit exceeded"},
+        503: {"description": "Inference backend temporarily unavailable (Modal timeout)"},
     },
 )
 async def forecast_batch(

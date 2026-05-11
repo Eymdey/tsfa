@@ -19,8 +19,14 @@ router = APIRouter(prefix="/usage", tags=["Usage"])
     response_model=UsageResponse,
     summary="Get current plan usage",
     description=(
-        "Returns credit usage and limits for the current billing period."
+        "Returns credit usage and limits for the current billing period. "
+        "Pass your RapidAPI key via X-RapidAPI-Key to get personalized usage data."
     ),
+    responses={
+        403: {"description": "Missing or invalid RapidAPI proxy secret"},
+        429: {"description": "Rate limit exceeded"},
+        503: {"description": "Service temporarily unavailable"},
+    },
 )
 async def get_usage(
     request: Request,

@@ -184,6 +184,23 @@ def run_naive(train: np.ndarray, horizon: int) -> np.ndarray:
     return np.full(horizon, float(train[-1]))
 
 
+def run_seasonal_naive(train: np.ndarray, horizon: int, freq: str) -> np.ndarray:
+    """Predict the value from the same period one season ago (seasonal naive).
+
+    Season length: 7 for daily/business-day, 24 for hourly, 12 for monthly.
+    """
+    season_map = {"D": 7, "B": 5, "h": 24, "H": 24, "W": 4, "M": 12}
+    m = season_map.get(freq, 7)
+    if len(train) < m:
+        # Fallback to simple naive if not enough history
+        return run_naive(train, horizon)
+    preds = []
+    for i in range(horizon):
+        idx = len(train) - m + (i % m)
+        preds.append(float(train[idx]))
+    return np.array(preds)
+
+
 def run_chronos(train: np.ndarray, horizon: int) -> np.ndarray:
     """Run ChronosModel locally (requires chronos + torch installed)."""
     from ml.models.chronos_model import ChronosModel
@@ -232,6 +249,8 @@ def rolling_evaluate(
                 y_pred = run_arima(train, horizon, freq)
             elif model_name == "naive":
                 y_pred = run_naive(train, horizon)
+            elif model_name == "seasonal_naive":
+                y_pred = run_seasonal_naive(train, horizon, freq)
             elif model_name == "chronos":
                 if local_only:
                     # Fallback to ARIMA when chronos/torch unavailable
@@ -297,6 +316,7 @@ def build_readme(results: list[dict]) -> str:
         "- **chronos**: Chronos-T5-Small via Modal.com (GPU) — "
         "shown as ARIMA-fallback when `--local-only`",
         "- **naive**: Repeat last observed value (baseline)",
+        "- **seasonal_naive**: Predict same-day last season value (7-day period for daily data)",
         "",
         "## Datasets",
         "",
@@ -325,7 +345,7 @@ DATASETS = {
     "m5_sample": load_m5_sample,
 }
 
-ALL_MODELS = ["arima", "naive", "chronos"]
+ALL_MODELS = ["arima", "naive", "seasonal_naive", "chronos"]
 
 
 def main() -> None:
@@ -335,7 +355,7 @@ def main() -> None:
     parser.add_argument(
         "--model",
         default="all",
-        choices=ALL_MODELS + ["all"],
+        choices=ALL_MODELS + ["all", "baselines"],
         help="Model(s) to benchmark (default: all).",
     )
     parser.add_argument(
@@ -359,7 +379,12 @@ def main() -> None:
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    models = ALL_MODELS if args.model == "all" else [args.model]
+    if args.model == "all":
+        models = ALL_MODELS
+    elif args.model == "baselines":
+        models = ["naive", "seasonal_naive"]
+    else:
+        models = [args.model]
     dataset_names = list(DATASETS.keys()) if args.dataset == "all" else [args.dataset]
 
     print(f"TSFA Benchmark — {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}")
