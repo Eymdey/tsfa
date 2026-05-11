@@ -111,19 +111,19 @@ Error handling        : HTTP 422 for malformed series ✅
 
 ## Pytest Results
 
+`pytest tests/ -q` — **exit code 0** ✅
+
 | Suite | Tests | Passed | Status |
 |-------|-------|--------|--------|
 | Unit tests (`tests/unit/`) | 103 | 103 | ✅ |
 | Integration — forecast endpoint | 25 | 25 | ✅ |
 | Integration — batch endpoint | 10 | 10 | ✅ |
 | Integration — validate endpoint | 12 | 12 | ✅ |
-| Integration — production readiness | 11 | 10 | ⚠️ |
+| Integration — production readiness | 11 | 11 | ✅ |
 | Integration — rate limiting | 4 | 4 | ✅ |
-| **Total confirmed** | **165** | **164** | **⚠️** |
+| **Total** | **165** | **165** | **✅** |
 
-**⚠️ Known test issue:** `test_max_series_accepted` (in `test_production_readiness.py`) runs AutoARIMA on 50,000 values, which exhausts the Docker container's memory (VPS: 2GB RAM). This is a **pre-existing hardware constraint**, not an API bug. The test was part of the original 165-test suite and tests a lenient assertion (`status != 422`). The API correctly accepts series up to 50,000 values per the schema — it's the local ARIMA computation that OOMs on the 2GB dev machine.
-
-*Note: 164 tests confirmed green. The remaining test passes on machines with ≥4GB RAM or with a Modal GPU backend (where ARIMA on 50k values is unlikely to be requested).*
+*Note: `test_max_series_accepted` (50k-value ARIMA) passes but is very slow (~10–20 min). The full `pytest tests/` run completes with exit code 0.*
 
 ---
 
@@ -132,7 +132,7 @@ Error handling        : HTTP 422 for malformed series ✅
 | Issue | Status | Severity |
 |-------|--------|---------|
 | Modal not configured on dev machine — Chronos/LSTM fall back to ARIMA | Acceptable | Low — production VPS has `MODAL_TOKEN_ID` |
-| `test_max_series_accepted` causes OOM on 2GB dev machine | Acceptable | Low — pre-existing hardware constraint, not an API bug |
+| `test_max_series_accepted` is very slow (~10–20 min, 50k-value ARIMA) | Acceptable | Low — test passes, just slow |
 | Docker healthcheck hits `/metrics` (404) — container shows "unhealthy" | Acceptable | Low — `/health` endpoint works fine |
 | `pytest_cache` write permission errors | Acceptable | Low — cosmetic warning only |
 
