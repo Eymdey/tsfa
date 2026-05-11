@@ -25,7 +25,7 @@ TSFA is a production-grade REST API that handles the full forecasting pipeline: 
 | `lstm` | 2 | Deep learning for long sequences with complex non-linear patterns. Best with 500+ observations. |
 | `auto` | 1 | Automatic model selection — recommended when unsure. |
 
-Benchmarks (M5, ETT-h1, Exchange Rate) → [HuggingFace Hub](https://huggingface.co/dorianmrt/tsfa-forecasting-api)
+Benchmarks (M5, ETT-h1, Exchange Rate) → [HuggingFace Hub](https://huggingface.co/Eymdeyy/tsfa-forecasting-api)
 
 ---
 

@@ -7,7 +7,7 @@ Get your first forecast in under 5 minutes.
 ## 1. Start the API
 
 ```bash
-git clone https://github.com/youruser/tsfa.git
+git clone https://github.com/Eymdey/tsfa.git
 cd tsfa
 cp .env.example .env
 docker compose up --build

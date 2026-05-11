@@ -4,7 +4,7 @@ Publication sur HuggingFace Hub.
 Usage:
     pip install huggingface_hub
     huggingface-cli login
-    python scripts/publish_huggingface.py --repo dorianmrt/tsfa-forecasting-api
+    python scripts/publish_huggingface.py --repo Eymdeyy/tsfa-forecasting-api
 
 Ce script publie :
 - Un README.md (model card) avec benchmarks + images inline
@@ -264,7 +264,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--repo",
         default="Eymdeyy/tsfa-forecasting-api",
-        help="HuggingFace repo ID (default: dorianmrt/tsfa-forecasting-api)",
+        help="HuggingFace repo ID (default: Eymdeyy/tsfa-forecasting-api)",
     )
     parser.add_argument(
         "--dry-run",

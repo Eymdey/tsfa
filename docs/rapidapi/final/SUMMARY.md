@@ -58,7 +58,7 @@ as Chronos/LSTM performance.
 | `https://tsfa.p.rapidapi.com` | All files | Real RapidAPI proxy URL (assigned after submission) |
 | `IP_DU_VPS` | `caddyfile_update.md` | Your Hetzner VPS IPv4 address |
 | `contact@eymdey-network.com` | `website_landing_page.html` footer | Your actual contact email |
-| `https://github.com/dorianmrt/tsfa` | `readme.md`, `website_landing_page.html` | Real GitHub repo URL |
+| `https://github.com/Eymdey/tsfa` | `readme.md`, `website_landing_page.html` | Real GitHub repo URL |
 | `YOUR_RAPIDAPI_KEY` | All code examples | Left as placeholder intentionally |
 
 ---

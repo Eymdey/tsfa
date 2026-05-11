@@ -30,7 +30,7 @@ Evaluated with rolling-window backtesting (5 windows per dataset). All numbers a
 | Exchange Rate (FX, daily) | arima | 30 | 0.0085 | 0.0100 | 1.13% | 1.13% |
 | M5-sample (retail demand, daily) | arima | 14 | 9.0427 | 10.5617 | 7.63% | 7.43% |
 
-Benchmark methodology: [benchmarks/results/README.md](https://github.com/dorianmrt/tsfa) — source code and raw results published.
+Benchmark methodology: [benchmarks/results/README.md](https://github.com/Eymdey/tsfa) — source code and raw results published.
 
 ---
 
