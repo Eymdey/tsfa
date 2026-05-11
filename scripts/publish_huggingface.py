@@ -4,10 +4,11 @@ Publication sur HuggingFace Hub.
 Usage:
     pip install huggingface_hub
     huggingface-cli login
-    python scripts/publish_huggingface.py --repo Eymdeyy/tsfa-forecasting-api
+    python scripts/publish_huggingface.py --repo dorianmrt/tsfa-forecasting-api
 
 Ce script publie :
-- Un README.md (model card) avec benchmarks intégrés
+- Un README.md (model card) avec benchmarks + images inline
+- Les 3 PNG de use cases (retail, financial, energy)
 - Le fichier benchmark_results.json
 - Un lien vers l'API RapidAPI
 """
@@ -27,7 +28,27 @@ except ImportError:
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 BENCHMARK_PATH = PROJECT_ROOT / "benchmarks" / "results" / "benchmark_results.json"
-RAPIDAPI_URL = "https://rapidapi.com/dorianmrt/api/tsfa"  # fill after publication
+USE_CASES_OUTPUTS = PROJECT_ROOT / "docs" / "use_cases" / "outputs"
+RAPIDAPI_URL = "https://rapidapi.com/dorianmrt/api/tsfa"
+
+# PNG files to upload and reference in the README
+IMAGES = [
+    {
+        "local": USE_CASES_OUTPUTS / "01_retail_forecast.png",
+        "repo_path": "images/01_retail_forecast.png",
+        "caption": "Retail demand forecast — 14-day ahead with 80% and 95% confidence intervals",
+    },
+    {
+        "local": USE_CASES_OUTPUTS / "02_financial_forecast.png",
+        "repo_path": "images/02_financial_forecast.png",
+        "caption": "EUR/USD exchange rate forecast — 30-day ahead with 95% probability band",
+    },
+    {
+        "local": USE_CASES_OUTPUTS / "03_energy_forecast.png",
+        "repo_path": "images/03_energy_forecast.png",
+        "caption": "Energy consumption forecast — 48h ahead (ETT-h1 real data)",
+    },
+]
 
 
 def load_benchmarks() -> list[dict]:
@@ -42,11 +63,17 @@ def format_benchmark_table(results: list[dict]) -> str:
     if not results:
         return "_No benchmark results found._\n"
 
+    # Show only arima + naive + seasonal_naive rows for readability
+    priority_models = ["arima", "naive", "seasonal_naive"]
+    filtered = [r for r in results if r.get("model") in priority_models and "error" not in r]
+    if not filtered:
+        filtered = [r for r in results if "error" not in r]
+
     lines = [
         "| Dataset | Model | Horizon | MAE | RMSE | MAPE | sMAPE |",
         "|---------|-------|---------|-----|------|------|-------|",
     ]
-    for r in results:
+    for r in filtered:
         lines.append(
             f"| {r['dataset']} | {r['model']} | {r['horizon']} "
             f"| {r['mae']:.4f} | {r['rmse']:.4f} "
@@ -55,8 +82,21 @@ def format_benchmark_table(results: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def generate_readme(results: list[dict]) -> str:
+def image_section(repo_id: str) -> str:
+    """Generate the README section with inline images referencing the repo."""
+    lines = []
+    for img in IMAGES:
+        if img["local"].exists():
+            url = f"https://huggingface.co/{repo_id}/resolve/main/{img['repo_path']}"
+            lines.append(f"![{img['caption']}]({url})")
+            lines.append(f"*{img['caption']}*")
+            lines.append("")
+    return "\n".join(lines)
+
+
+def generate_readme(results: list[dict], repo_id: str) -> str:
     benchmark_table = format_benchmark_table(results)
+    imgs = image_section(repo_id)
     return f"""---
 language: en
 license: mit
@@ -103,6 +143,10 @@ print(resp.json()["forecast"]["mean"])
 # [171.2, 174.5, 177.8, 181.0, 184.3, 187.6, 190.8]
 ```
 
+## Use Cases
+
+{imgs}
+
 ## Models
 
 | Model | Credits | Best For |
@@ -136,14 +180,14 @@ M5 (retail sales). All results are out-of-sample.
 
 | Plan | Monthly Credits | Rate Limit | Price |
 |------|----------------|------------|-------|
-| BASIC | 500 | 10 req/min | $0 |
-| PRO | 10,000 | 30 req/min | $49 |
-| ULTRA | 50,000 | 100 req/min | $199 |
-| MEGA | 200,000 | 300 req/min | $499 |
+| Free | 500 | 10 req/min | $0 |
+| Basic | 10,000 | 30 req/min | $49 |
+| Pro | 50,000 | 100 req/min | $199 |
+| Ultra | 200,000 | 300 req/min | $499 |
 
 ## License
 
-MIT — see [LICENSE](./LICENSE)
+MIT — see [GitHub](https://github.com/Eymdey/tsfa)
 """
 
 
@@ -160,8 +204,12 @@ def publish(repo_id: str, dry_run: bool = False) -> None:
     results = load_benchmarks()
     print(f"  Loaded {len(results)} benchmark result(s)")
 
+    # Check images
+    available_images = [img for img in IMAGES if img["local"].exists()]
+    print(f"  Found {len(available_images)}/3 PNG images")
+
     # Generate README
-    readme_content = generate_readme(results)
+    readme_content = generate_readme(results, repo_id)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
@@ -169,13 +217,6 @@ def publish(repo_id: str, dry_run: bool = False) -> None:
         # Write README
         readme_path = tmp / "README.md"
         readme_path.write_text(readme_content, encoding="utf-8")
-
-        # Copy benchmark_results.json
-        benchmark_dest = tmp / "benchmark_results.json"
-        if BENCHMARK_PATH.exists():
-            benchmark_dest.write_text(
-                BENCHMARK_PATH.read_text(encoding="utf-8"), encoding="utf-8"
-            )
 
         if dry_run:
             print("\n--- DRY RUN: README.md ---")
@@ -189,20 +230,31 @@ def publish(repo_id: str, dry_run: bool = False) -> None:
             path_in_repo="README.md",
             repo_id=repo_id,
             repo_type="model",
-            commit_message="Update model card with benchmarks",
+            commit_message="Update model card with benchmarks and use case images",
         )
         print("  Uploaded README.md")
 
         # Upload benchmark results
-        if benchmark_dest.exists():
+        if BENCHMARK_PATH.exists():
             upload_file(
-                path_or_fileobj=str(benchmark_dest),
+                path_or_fileobj=str(BENCHMARK_PATH),
                 path_in_repo="benchmark_results.json",
                 repo_id=repo_id,
                 repo_type="model",
                 commit_message="Update benchmark results",
             )
             print("  Uploaded benchmark_results.json")
+
+        # Upload PNG images
+        for img in available_images:
+            upload_file(
+                path_or_fileobj=str(img["local"]),
+                path_in_repo=img["repo_path"],
+                repo_id=repo_id,
+                repo_type="model",
+                commit_message=f"Add use case image: {img['local'].name}",
+            )
+            print(f"  Uploaded {img['repo_path']}")
 
     print(f"\nDone! View at: https://huggingface.co/{repo_id}")
 
@@ -211,8 +263,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Publish TSFA to HuggingFace Hub")
     parser.add_argument(
         "--repo",
-        default="Eymdeyy/tsfa-forecasting-api",
-        help="HuggingFace repo ID (default: Eymdeyy/tsfa-forecasting-api)",
+        default="dorianmrt/tsfa-forecasting-api",
+        help="HuggingFace repo ID (default: dorianmrt/tsfa-forecasting-api)",
     )
     parser.add_argument(
         "--dry-run",
