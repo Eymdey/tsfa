@@ -4,7 +4,7 @@ Publication sur HuggingFace Hub.
 Usage:
     pip install huggingface_hub
     huggingface-cli login
-    python scripts/publish_huggingface.py --repo dorianmrt/tsfa-forecasting-api
+    python scripts/publish_huggingface.py --repo Eymdeyy/tsfa-forecasting-api
 
 Ce script publie :
 - Un README.md (model card) avec benchmarks intégrés
@@ -136,10 +136,10 @@ M5 (retail sales). All results are out-of-sample.
 
 | Plan | Monthly Credits | Rate Limit | Price |
 |------|----------------|------------|-------|
-| Free | 100 | 10 req/min | $0 |
-| Basic | 1,000 | 30 req/min | $9 |
-| Pro | 10,000 | 100 req/min | $29 |
-| Ultra | 100,000 | 500 req/min | $99 |
+| BASIC | 500 | 10 req/min | $0 |
+| PRO | 10,000 | 30 req/min | $49 |
+| ULTRA | 50,000 | 100 req/min | $199 |
+| MEGA | 200,000 | 300 req/min | $499 |
 
 ## License
 
@@ -211,8 +211,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Publish TSFA to HuggingFace Hub")
     parser.add_argument(
         "--repo",
-        default="dorianmrt/tsfa-forecasting-api",
-        help="HuggingFace repo ID (default: dorianmrt/tsfa-forecasting-api)",
+        default="Eymdeyy/tsfa-forecasting-api",
+        help="HuggingFace repo ID (default: Eymdeyy/tsfa-forecasting-api)",
     )
     parser.add_argument(
         "--dry-run",

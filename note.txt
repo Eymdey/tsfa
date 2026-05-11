@@ -5,3 +5,5 @@ mdp: Falka1508!
 mdp root: usTRhFd7rFaV
 
 ssh dorian@178.105.88.146
+
+hf token: [REDACTED - stocker dans ~/.bashrc ou un gestionnaire de secrets]
