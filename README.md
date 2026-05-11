@@ -4,6 +4,7 @@ Professional REST API for time series forecasting. Get point forecasts with conf
 
 ![Tests](https://img.shields.io/badge/tests-165%20passing-brightgreen)
 [![RapidAPI](https://img.shields.io/badge/RapidAPI-Available-blue)](https://rapidapi.com/hub)
+[![HuggingFace](https://img.shields.io/badge/HuggingFace-Eymdeyy%2Ftsfa--forecasting--api-yellow)](https://huggingface.co/Eymdeyy/tsfa-forecasting-api)
 
 ---
 

@@ -263,7 +263,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Publish TSFA to HuggingFace Hub")
     parser.add_argument(
         "--repo",
-        default="dorianmrt/tsfa-forecasting-api",
+        default="Eymdeyy/tsfa-forecasting-api",
         help="HuggingFace repo ID (default: dorianmrt/tsfa-forecasting-api)",
     )
     parser.add_argument(
