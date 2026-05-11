@@ -3,234 +3,452 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="TSFA — Time Series Forecasting API. ARIMA, Chronos-T5 and LSTM models behind a single REST endpoint. Get forecasts with calibrated confidence intervals in one API call." />
   <title>TSFA — Time Series Forecasting API</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:       #0f1117;
-      --bg2:      #161b27;
-      --bg3:      #1e2535;
-      --border:   #2a3347;
-      --text:     #e2e8f0;
-      --muted:    #8899aa;
-      --accent:   #3b82f6;
-      --accent2:  #60a5fa;
-      --green:    #22c55e;
-      --code-bg:  #0d1117;
-      --radius:   8px;
-      --max-w:    1100px;
+      --bg:      #0d1117;
+      --bg2:     #161b27;
+      --bg3:     #1e2535;
+      --bg4:     #222d40;
+      --border:  #2a3347;
+      --text:    #e2e8f0;
+      --muted:   #8899aa;
+      --accent:  #3b82f6;
+      --acc2:    #60a5fa;
+      --green:   #22c55e;
+      --yellow:  #f59e0b;
+      --red:     #ef4444;
+      --code-bg: #090d13;
+      --radius:  8px;
+      --max-w:   1100px;
     }
+
+    html { scroll-behavior: smooth; }
 
     body {
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
       font-size: 16px;
-      line-height: 1.6;
+      line-height: 1.65;
     }
 
-    a { color: var(--accent2); text-decoration: none; }
+    a { color: var(--acc2); text-decoration: none; }
     a:hover { text-decoration: underline; }
 
     .container { max-width: var(--max-w); margin: 0 auto; padding: 0 24px; }
 
-    /* NAV */
-    nav {
-      border-bottom: 1px solid var(--border);
-      padding: 16px 0;
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 13px;
+      background: var(--bg3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--acc2);
     }
-    nav .inner {
+
+    /* ──────────────────── NAV ──────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid var(--border);
+      background: rgba(13,17,23,0.92);
+      backdrop-filter: blur(12px);
+      padding: 0;
+    }
+    .nav-inner {
       max-width: var(--max-w);
       margin: 0 auto;
       padding: 0 24px;
+      height: 60px;
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
-    nav .logo {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.5px;
+    .logo { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+    .logo em { color: var(--accent); font-style: normal; }
+    .nav-links { display: flex; gap: 28px; font-size: 14px; }
+    .nav-links a { color: var(--muted); transition: color 0.15s; }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+    .nav-cta {
+      background: var(--accent);
+      color: #fff !important;
+      padding: 7px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      transition: background 0.15s;
     }
-    nav .logo span { color: var(--accent); }
-    nav .nav-links { display: flex; gap: 24px; font-size: 14px; color: var(--muted); }
-    nav .nav-links a { color: var(--muted); }
-    nav .nav-links a:hover { color: var(--text); }
+    .nav-cta:hover { background: var(--acc2) !important; }
+    .hamburger { display: none; background: none; border: none; cursor: pointer; padding: 4px; }
+    .hamburger span {
+      display: block; width: 22px; height: 2px;
+      background: var(--text); margin: 4px 0;
+      border-radius: 2px; transition: 0.2s;
+    }
 
-    /* HERO */
+    /* ──────────────────── HERO ──────────────────── */
     .hero {
-      padding: 96px 0 80px;
+      padding: 100px 0 80px;
       text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -200px; left: 50%;
+      transform: translateX(-50%);
+      width: 700px; height: 700px;
+      background: radial-gradient(ellipse, rgba(59,130,246,0.12) 0%, transparent 70%);
+      pointer-events: none;
     }
     .hero-badge {
-      display: inline-block;
-      background: var(--bg3);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg2);
       border: 1px solid var(--border);
       border-radius: 20px;
-      padding: 4px 14px;
+      padding: 5px 16px;
       font-size: 13px;
       color: var(--muted);
-      margin-bottom: 28px;
+      margin-bottom: 32px;
+    }
+    .hero-badge .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
     }
     .hero h1 {
-      font-size: clamp(32px, 5vw, 56px);
+      font-size: clamp(36px, 5.5vw, 64px);
       font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -1.5px;
-      margin-bottom: 20px;
+      line-height: 1.08;
+      letter-spacing: -2px;
+      margin-bottom: 24px;
     }
-    .hero h1 span { color: var(--accent); }
-    .hero p {
-      font-size: 18px;
+    .hero h1 em { color: var(--accent); font-style: normal; }
+    .hero-sub {
+      font-size: clamp(16px, 2vw, 20px);
       color: var(--muted);
-      max-width: 600px;
-      margin: 0 auto 36px;
+      max-width: 580px;
+      margin: 0 auto 40px;
+      line-height: 1.55;
     }
-    .hero-cta {
+    .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
       display: inline-block;
       background: var(--accent);
       color: #fff;
       padding: 14px 32px;
       border-radius: var(--radius);
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
-      transition: background 0.15s;
+      transition: background 0.15s, transform 0.1s;
     }
-    .hero-cta:hover { background: var(--accent2); text-decoration: none; }
-    .hero-sub {
-      margin-top: 16px;
-      font-size: 13px;
-      color: var(--muted);
+    .btn-primary:hover { background: var(--acc2); text-decoration: none; transform: translateY(-1px); }
+    .btn-secondary {
+      display: inline-block;
+      background: var(--bg2);
+      color: var(--text);
+      padding: 14px 32px;
+      border-radius: var(--radius);
+      font-size: 15px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      transition: border-color 0.15s, transform 0.1s;
     }
+    .btn-secondary:hover { border-color: var(--accent); text-decoration: none; transform: translateY(-1px); }
 
-    /* SECTION */
-    section { padding: 80px 0; }
+    /* Stats bar */
+    .stats-bar {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      margin-top: 64px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--bg2);
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .stat {
+      flex: 1;
+      padding: 20px 16px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .stat:last-child { border-right: none; }
+    .stat-val { font-size: 28px; font-weight: 800; letter-spacing: -1px; color: var(--text); }
+    .stat-val em { color: var(--accent); font-style: normal; }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* ──────────────────── SECTION ──────────────────── */
+    section { padding: 88px 0; }
     section + section { border-top: 1px solid var(--border); }
-    .section-label {
+    .section-tag {
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1.5px;
       color: var(--accent);
       margin-bottom: 12px;
     }
     h2 {
-      font-size: clamp(24px, 3vw, 36px);
-      font-weight: 700;
-      letter-spacing: -0.5px;
+      font-size: clamp(26px, 3.5vw, 40px);
+      font-weight: 800;
+      letter-spacing: -1px;
       margin-bottom: 16px;
+      line-height: 1.15;
     }
     .section-desc {
-      color: var(--muted);
       font-size: 17px;
-      max-width: 640px;
-      margin-bottom: 48px;
+      color: var(--muted);
+      max-width: 600px;
+      margin-bottom: 52px;
+      line-height: 1.55;
     }
 
-    /* HOW IT WORKS */
+    /* ──────────────────── HOW IT WORKS ──────────────────── */
     .steps {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 24px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
     }
     .step {
       background: var(--bg2);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 28px;
+      position: relative;
     }
     .step-num {
-      width: 36px; height: 36px;
+      width: 38px; height: 38px;
       border-radius: 50%;
       background: var(--accent);
       color: #fff;
-      font-weight: 700;
-      font-size: 15px;
+      font-weight: 800;
+      font-size: 16px;
       display: flex; align-items: center; justify-content: center;
-      margin-bottom: 16px;
+      margin-bottom: 18px;
+      flex-shrink: 0;
     }
-    .step h3 { font-size: 17px; margin-bottom: 8px; }
-    .step p { font-size: 14px; color: var(--muted); line-height: 1.5; }
+    .step h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .step p { font-size: 14px; color: var(--muted); line-height: 1.55; }
 
-    /* TABLE */
-    .table-wrap { overflow-x: auto; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
+    /* ──────────────────── TABLE ──────────────────── */
+    .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th {
       background: var(--bg3);
-      border: 1px solid var(--border);
-      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      padding: 11px 16px;
       text-align: left;
       font-weight: 600;
       color: var(--muted);
       font-size: 12px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      white-space: nowrap;
     }
     td {
-      border: 1px solid var(--border);
-      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      padding: 11px 16px;
       color: var(--text);
+      vertical-align: middle;
     }
-    tr:nth-child(even) td { background: var(--bg2); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(59,130,246,0.04); }
     .tag {
       display: inline-block;
-      background: var(--bg3);
-      border: 1px solid var(--border);
+      background: rgba(59,130,246,0.12);
+      border: 1px solid rgba(59,130,246,0.3);
       border-radius: 4px;
       padding: 2px 8px;
       font-size: 12px;
       font-family: monospace;
-      color: var(--accent2);
+      color: var(--acc2);
+      white-space: nowrap;
     }
+    .tag-green {
+      background: rgba(34,197,94,0.1);
+      border-color: rgba(34,197,94,0.3);
+      color: var(--green);
+    }
+    .tag-yellow {
+      background: rgba(245,158,11,0.1);
+      border-color: rgba(245,158,11,0.3);
+      color: var(--yellow);
+    }
+    .tag-red {
+      background: rgba(239,68,68,0.1);
+      border-color: rgba(239,68,68,0.3);
+      color: var(--red);
+    }
+    .check { color: var(--green); font-weight: 700; }
+    .cross { color: var(--muted); }
 
-    /* PRICING */
+    /* ──────────────────── USE CASES ──────────────────── */
+    .cases {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .case {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+    }
+    .case-icon {
+      font-size: 28px;
+      margin-bottom: 14px;
+      display: block;
+    }
+    .case h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .case p { font-size: 14px; color: var(--muted); line-height: 1.55; margin-bottom: 12px; }
+    .case .detail { font-size: 13px; color: var(--muted); }
+    .case .detail strong { color: var(--text); }
+
+    /* ──────────────────── CODE TABS ──────────────────── */
+    .code-wrap {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .code-tabs {
+      display: flex;
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+    }
+    .code-tab {
+      padding: 10px 20px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+      user-select: none;
+      border-right: 1px solid var(--border);
+    }
+    .code-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+    .code-tab:hover { color: var(--text); }
+    .copy-btn {
+      margin-left: auto;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      margin: 8px 12px;
+      padding: 4px 12px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: inherit;
+      transition: color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .copy-btn:hover { color: var(--text); border-color: var(--accent); }
+    .code-panel { display: none; }
+    .code-panel.active { display: block; }
+    pre {
+      padding: 24px;
+      overflow-x: auto;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #cdd9e5;
+      tab-size: 2;
+    }
+    .kw  { color: #ff7b72; }
+    .str { color: #a5d6ff; }
+    .cmt { color: #6e7f8d; font-style: italic; }
+    .fn  { color: #d2a8ff; }
+    .num { color: #79c0ff; }
+    .key { color: #7ee787; }
+    .punc{ color: #8b949e; }
+
+    /* ──────────────────── ENDPOINTS ──────────────────── */
+    .endpoints { display: flex; flex-direction: column; gap: 12px; }
+    .endpoint {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .method {
+      font-family: monospace;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .method-post { background: rgba(34,197,94,0.15); color: var(--green); }
+    .method-get  { background: rgba(59,130,246,0.15); color: var(--acc2); }
+    .endpoint-path {
+      font-family: monospace;
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 600;
+    }
+    .endpoint-desc { font-size: 13px; color: var(--muted); margin-top: 4px; }
+    .endpoint-meta { margin-left: auto; display: flex; gap: 8px; flex-shrink: 0; align-items: flex-start; margin-top: 2px; }
+
+    /* ──────────────────── PRICING ──────────────────── */
     .pricing-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 16px;
     }
     .plan {
       background: var(--bg2);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 28px 24px;
+      padding: 28px 22px;
       display: flex;
       flex-direction: column;
+      position: relative;
     }
     .plan.featured {
       border-color: var(--accent);
+      background: linear-gradient(180deg, rgba(59,130,246,0.06) 0%, var(--bg2) 100%);
     }
-    .plan-badge {
+    .popular-badge {
+      position: absolute;
+      top: -1px; right: 20px;
+      background: var(--accent);
+      color: #fff;
       font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--accent);
-      margin-bottom: 8px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 0 0 6px 6px;
+      letter-spacing: 0.5px;
     }
-    .plan-name { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
-    .plan-price {
-      font-size: 32px;
-      font-weight: 800;
-      margin-bottom: 4px;
-      letter-spacing: -1px;
-    }
-    .plan-price span { font-size: 16px; font-weight: 400; color: var(--muted); }
-    .plan-volume { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
-    .plan-features { list-style: none; font-size: 14px; flex: 1; }
-    .plan-features li { padding: 5px 0; color: var(--muted); }
-    .plan-features li::before { content: "✓ "; color: var(--green); font-weight: 700; }
+    .plan-name { font-size: 15px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .plan-price { font-size: 38px; font-weight: 800; letter-spacing: -1.5px; line-height: 1; margin-bottom: 4px; }
+    .plan-price span { font-size: 16px; font-weight: 400; color: var(--muted); letter-spacing: 0; }
+    .plan-volume { font-size: 13px; color: var(--muted); padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+    .plan-features { list-style: none; font-size: 14px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .plan-features li { color: var(--muted); display: flex; gap: 8px; align-items: flex-start; }
+    .plan-features li .check { flex-shrink: 0; }
     .plan-btn {
       display: block;
       text-align: center;
       margin-top: 24px;
-      padding: 11px 0;
+      padding: 12px 0;
       border-radius: var(--radius);
       font-size: 14px;
       font-weight: 600;
@@ -239,151 +457,211 @@
       background: var(--bg3);
       transition: border-color 0.15s, background 0.15s;
     }
-    .plan-btn:hover { border-color: var(--accent); background: var(--bg); text-decoration: none; }
-    .plan.featured .plan-btn {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-    }
-    .plan.featured .plan-btn:hover { background: var(--accent2); border-color: var(--accent2); }
+    .plan-btn:hover { border-color: var(--accent); background: rgba(59,130,246,0.08); text-decoration: none; }
+    .plan.featured .plan-btn { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .plan.featured .plan-btn:hover { background: var(--acc2); border-color: var(--acc2); }
 
-    /* CODE */
-    .code-block-wrap {
-      background: var(--code-bg);
+    /* ──────────────────── ERROR CODES ──────────────────── */
+    .errors { display: flex; flex-direction: column; gap: 8px; }
+    .err {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: auto auto 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+    .err.err-4xx { border-left-color: var(--yellow); }
+    .err.err-5xx { border-left-color: var(--red); }
+    .err.err-ok  { border-left-color: var(--green); }
+    .err-http { font-family: monospace; font-size: 12px; font-weight: 700; width: 32px; }
+    .err-code { font-family: monospace; font-size: 12px; color: var(--acc2); white-space: nowrap; }
+    .err-desc { font-size: 13px; color: var(--muted); }
+
+    /* ──────────────────── FAQ ──────────────────── */
+    .faq { display: flex; flex-direction: column; gap: 12px; }
+    .faq-item {
+      background: var(--bg2);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       overflow: hidden;
     }
-    .code-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 16px;
-      background: var(--bg3);
-      border-bottom: 1px solid var(--border);
-      font-size: 13px;
-      color: var(--muted);
-    }
-    .code-header button {
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 4px 12px;
-      font-size: 12px;
-      color: var(--muted);
+    .faq-q {
+      padding: 18px 20px;
+      font-size: 15px;
+      font-weight: 600;
       cursor: pointer;
-      transition: color 0.15s, border-color 0.15s;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+      transition: background 0.15s;
     }
-    .code-header button:hover { color: var(--text); border-color: var(--accent); }
-    pre {
-      padding: 24px;
-      overflow-x: auto;
-      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-      font-size: 13px;
-      line-height: 1.65;
-      color: #cdd9e5;
-    }
-    .kw  { color: #ff7b72; }
-    .str { color: #a5d6ff; }
-    .cmt { color: #8b949e; }
-    .fn  { color: #d2a8ff; }
-    .num { color: #79c0ff; }
-    .var { color: #cdd9e5; }
-
-    /* FOOTER */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 40px 0;
+    .faq-q:hover { background: var(--bg3); }
+    .faq-q .arrow { color: var(--muted); font-size: 18px; transition: transform 0.2s; flex-shrink: 0; }
+    .faq-item.open .faq-q .arrow { transform: rotate(45deg); }
+    .faq-a {
+      display: none;
+      padding: 0 20px 18px;
       font-size: 14px;
       color: var(--muted);
+      line-height: 1.65;
     }
-    footer .inner {
-      max-width: var(--max-w);
-      margin: 0 auto;
-      padding: 0 24px;
+    .faq-item.open .faq-a { display: block; }
+
+    /* ──────────────────── FOOTER ──────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 52px 0 40px;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 40px;
+      margin-bottom: 48px;
+    }
+    .footer-brand .logo { font-size: 20px; margin-bottom: 12px; display: block; }
+    .footer-brand p { font-size: 14px; color: var(--muted); line-height: 1.6; max-width: 260px; }
+    .footer-col h4 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; color: var(--muted); }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .footer-col ul li a { font-size: 14px; color: var(--muted); transition: color 0.15s; }
+    .footer-col ul li a:hover { color: var(--text); text-decoration: none; }
+    .footer-bottom {
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      font-size: 13px;
+      color: var(--muted);
       flex-wrap: wrap;
-      gap: 16px;
+      gap: 12px;
     }
-    footer .links { display: flex; gap: 24px; }
 
-    /* RESPONSIVE */
-    @media (max-width: 640px) {
-      .hero { padding: 64px 0 56px; }
-      nav .nav-links { display: none; }
-      footer .inner { flex-direction: column; align-items: flex-start; }
+    /* ──────────────────── RESPONSIVE ──────────────────── */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .nav-links.open { display: flex; flex-direction: column; position: absolute; top: 60px; left: 0; right: 0; background: var(--bg); border-bottom: 1px solid var(--border); padding: 20px 24px; gap: 16px; z-index: 99; }
+      .hamburger { display: block; }
+      .hero { padding: 70px 0 60px; }
+      .stats-bar { flex-direction: column; border-radius: var(--radius); }
+      .stat { border-right: none; border-bottom: 1px solid var(--border); }
+      .stat:last-child { border-bottom: none; }
+      .endpoint { flex-direction: column; gap: 8px; }
+      .endpoint-meta { margin-left: 0; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .footer-brand { grid-column: 1 / -1; }
+      .hero-actions { flex-direction: column; align-items: center; }
+    }
+    @media (max-width: 480px) {
+      .footer-grid { grid-template-columns: 1fr; }
+      h2 { font-size: 26px; }
     }
   </style>
 </head>
 <body>
 
-<!-- NAV -->
+<!-- ═══════════════════════ NAV ═══════════════════════ -->
 <nav>
-  <div class="inner">
-    <div class="logo">TS<span>FA</span></div>
-    <div class="nav-links">
+  <div class="nav-inner">
+    <div class="logo">TS<em>FA</em></div>
+    <div class="nav-links" id="nav-links">
       <a href="#how-it-works">How it works</a>
       <a href="#models">Models</a>
       <a href="#benchmarks">Benchmarks</a>
       <a href="#pricing">Pricing</a>
-      <a href="#code">Code</a>
+      <a href="#code">Docs</a>
+      <a href="https://rapidapi.com/dorianmrt/api/tsfa" class="nav-cta" target="_blank" rel="noopener">Get API Key</a>
     </div>
+    <button class="hamburger" id="hamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </nav>
 
-<!-- HERO -->
+<!-- ═══════════════════════ HERO ═══════════════════════ -->
 <section class="hero">
   <div class="container">
-    <div class="hero-badge">v1.0.0 — 165 tests passing</div>
-    <h1>Forecast any time series<br><span>in one API call</span></h1>
-    <p>ARIMA, Chronos-T5, and LSTM models behind a single REST endpoint. Send numbers, get forecasts with calibrated confidence intervals. No setup.</p>
-    <a href="https://rapidapi.com/dorianmrt/api/tsfa" class="hero-cta" target="_blank" rel="noopener">
-      Get your API key on RapidAPI
-    </a>
-    <div class="hero-sub">Free tier available — no credit card required</div>
+    <div class="hero-badge">
+      <span class="dot"></span>
+      v1.0.0 — Production ready
+    </div>
+    <h1>Forecast any time series<br><em>in one API call</em></h1>
+    <p class="hero-sub">
+      ARIMA, Chronos-T5, and LSTM models behind a single REST endpoint.
+      Send a list of numbers, get back point forecasts with calibrated 80% and 95%
+      confidence intervals. No infrastructure, no training.
+    </p>
+    <div class="hero-actions">
+      <a href="https://rapidapi.com/dorianmrt/api/tsfa" class="btn-primary" target="_blank" rel="noopener">
+        Get your API key — free
+      </a>
+      <a href="#code" class="btn-secondary">View code examples</a>
+    </div>
+
+    <div class="stats-bar" style="margin-top:56px;">
+      <div class="stat">
+        <div class="stat-val"><em>3</em></div>
+        <div class="stat-label">Forecasting models</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val"><em>165</em></div>
+        <div class="stat-label">Tests passing</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val"><em>&lt;1s</em></div>
+        <div class="stat-label">ARIMA latency</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val"><em>1.13%</em></div>
+        <div class="stat-label">MAPE on FX data</div>
+      </div>
+    </div>
   </div>
 </section>
 
-<!-- HOW IT WORKS -->
+<!-- ═══════════════════════ HOW IT WORKS ═══════════════════════ -->
 <section id="how-it-works">
   <div class="container">
-    <div class="section-label">How it works</div>
+    <div class="section-tag">How it works</div>
     <h2>Three steps to your first forecast</h2>
-    <p class="section-desc">No training pipeline. No infrastructure. No ML background required.</p>
+    <p class="section-desc">No ML background needed. No model training. No infrastructure to provision.</p>
     <div class="steps">
       <div class="step">
         <div class="step-num">1</div>
         <h3>Subscribe on RapidAPI</h3>
-        <p>Create a free account, subscribe to the BASIC plan, and copy your API key. Takes 2 minutes.</p>
+        <p>Create a free account, pick a plan (BASIC is free — no credit card), and copy your API key. Takes 2 minutes.</p>
       </div>
       <div class="step">
         <div class="step-num">2</div>
-        <h3>Send your data</h3>
-        <p>POST a JSON array of historical values to <code style="font-size:12px;color:#60a5fa">/v1/forecast/univariate</code> with a horizon and frequency.</p>
+        <h3>POST your time series</h3>
+        <p>Send a JSON array of historical values to <code>/v1/forecast/univariate</code> with a horizon and frequency. That's it.</p>
       </div>
       <div class="step">
         <div class="step-num">3</div>
-        <h3>Get your forecast</h3>
-        <p>Receive point forecasts and 80%/95% prediction intervals. Auto-fallback to ARIMA if the GPU backend is unavailable.</p>
+        <h3>Read the forecast</h3>
+        <p>Get back point forecasts, 80% and 95% prediction intervals, diagnostics (trend, seasonality, stationarity), and credit usage.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- MODELS -->
+<!-- ═══════════════════════ MODELS ═══════════════════════ -->
 <section id="models">
   <div class="container">
-    <div class="section-label">Models</div>
-    <h2>Three models, one endpoint</h2>
-    <p class="section-desc">Pass <code style="color:#60a5fa;font-size:14px">"model": "auto"</code> to let the API select, or specify one explicitly.</p>
+    <div class="section-tag">Models</div>
+    <h2>Three models. One endpoint.</h2>
+    <p class="section-desc">Pass <code>"model": "auto"</code> to let the API select, or specify one explicitly. The API automatically falls back to ARIMA if the GPU backend is unavailable.</p>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Model</th>
-            <th>Type</th>
+            <th>Model ID</th>
+            <th>Architecture</th>
+            <th>Backend</th>
             <th>Best for</th>
             <th>Credits/call</th>
             <th>Avg latency</th>
@@ -393,48 +671,67 @@
           <tr>
             <td><span class="tag">arima</span></td>
             <td>AutoARIMA (statsforecast)</td>
-            <td>Short series (&lt;200 obs), interpretable output</td>
+            <td><span class="tag-green" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;padding:2px 8px;font-size:12px;color:var(--green);">CPU local</span></td>
+            <td>Short series (&lt;200 obs), interpretable output, fast turnaround</td>
             <td>1</td>
             <td>&lt;300ms</td>
           </tr>
           <tr>
             <td><span class="tag">chronos</span></td>
-            <td>Chronos-T5-Small (GPU)</td>
-            <td>General-purpose, zero-shot, any domain</td>
+            <td>Chronos-T5-Small (Amazon, zero-shot)</td>
+            <td><span class="tag-yellow" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:4px;padding:2px 8px;font-size:12px;color:var(--yellow);">GPU · Modal</span></td>
+            <td>General-purpose, any domain, any frequency</td>
             <td>1</td>
             <td>1–4s</td>
           </tr>
           <tr>
             <td><span class="tag">lstm</span></td>
-            <td>Custom LSTM (GPU)</td>
-            <td>Long series (&gt;500 obs), strong seasonality</td>
+            <td>Custom LSTM (PyTorch)</td>
+            <td><span class="tag-yellow" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:4px;padding:2px 8px;font-size:12px;color:var(--yellow);">GPU · Modal</span></td>
+            <td>Long series (&gt;500 obs) with strong seasonal patterns</td>
             <td>2</td>
             <td>1–3s</td>
           </tr>
           <tr>
             <td><span class="tag">ensemble</span></td>
-            <td>Weighted ensemble</td>
-            <td>Maximum accuracy</td>
+            <td>Weighted average (all models)</td>
+            <td><span class="tag-yellow" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:4px;padding:2px 8px;font-size:12px;color:var(--yellow);">GPU · Modal</span></td>
+            <td>Maximum accuracy when cost is secondary</td>
             <td>5</td>
             <td>3–8s</td>
+          </tr>
+          <tr>
+            <td><span class="tag">auto</span></td>
+            <td>Automatic model selection</td>
+            <td>—</td>
+            <td>Unknown data — let the API decide</td>
+            <td>varies</td>
+            <td>varies</td>
           </tr>
         </tbody>
       </table>
     </div>
+    <p style="margin-top:16px;font-size:13px;color:var(--muted);">
+      <strong style="color:var(--text);">Automatic fallback:</strong>
+      If the GPU backend (Modal.com) is unreachable, the API silently falls back to ARIMA and sets
+      <code>fallback_used: true</code> in the response. Your request always completes.
+    </p>
   </div>
 </section>
 
-<!-- BENCHMARKS -->
+<!-- ═══════════════════════ BENCHMARKS ═══════════════════════ -->
 <section id="benchmarks">
   <div class="container">
-    <div class="section-label">Benchmarks</div>
-    <h2>Public results — real numbers</h2>
-    <p class="section-desc">Rolling-window backtesting (5 windows per dataset). All source code and raw results are published in the GitHub repository.</p>
+    <div class="section-tag">Benchmarks</div>
+    <h2>Real numbers. Published results.</h2>
+    <p class="section-desc">Rolling-window backtesting — 5 windows per dataset. Source code and raw JSON results are available in the GitHub repository. No cherry-picked metrics.</p>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
             <th>Dataset</th>
+            <th>Domain</th>
+            <th>Frequency</th>
             <th>Model</th>
             <th>Horizon</th>
             <th>MAE</th>
@@ -445,7 +742,9 @@
         </thead>
         <tbody>
           <tr>
-            <td>ETT-h1 (electricity, hourly)</td>
+            <td><strong>ETT-h1</strong></td>
+            <td>Electricity</td>
+            <td>Hourly</td>
             <td><span class="tag">arima</span></td>
             <td>24h</td>
             <td>2.4524</td>
@@ -454,7 +753,9 @@
             <td>10.74%</td>
           </tr>
           <tr>
-            <td>Exchange Rate (FX, daily)</td>
+            <td><strong>Exchange Rate</strong></td>
+            <td>Finance (FX)</td>
+            <td>Daily</td>
             <td><span class="tag">arima</span></td>
             <td>30d</td>
             <td>0.0085</td>
@@ -463,7 +764,9 @@
             <td>1.13%</td>
           </tr>
           <tr>
-            <td>M5-sample (retail demand, daily)</td>
+            <td><strong>M5-sample</strong></td>
+            <td>Retail demand</td>
+            <td>Daily</td>
             <td><span class="tag">arima</span></td>
             <td>14d</td>
             <td>9.0427</td>
@@ -474,98 +777,235 @@
         </tbody>
       </table>
     </div>
+    <p style="margin-top:16px;font-size:13px;color:var(--muted);">
+      ETT-h1: <a href="https://github.com/zhouhaoyi/ETDataset" target="_blank" rel="noopener">ETDataset</a> —
+      Exchange Rate: <a href="https://github.com/thuml/Time-Series-Library" target="_blank" rel="noopener">Time-Series-Library</a> —
+      M5-sample: synthetic retail demand with M5-style weekly seasonality.
+      Methodology: 5-window rolling backtesting, evaluated on held-out test windows.
+    </p>
   </div>
 </section>
 
-<!-- PRICING -->
-<section id="pricing">
+<!-- ═══════════════════════ WHY TSFA ═══════════════════════ -->
+<section id="compare">
   <div class="container">
-    <div class="section-label">Pricing</div>
-    <h2>Simple, volume-based plans</h2>
-    <p class="section-desc">Pay for what you use. Upgrade or cancel anytime. RapidAPI handles billing.</p>
-    <div class="pricing-grid">
+    <div class="section-tag">Comparison</div>
+    <h2>Why TSFA over alternatives</h2>
+    <p class="section-desc">Honest comparison. TSFA is not the right tool for every use case — but for univariate forecasting with a REST API, it's the simplest and cheapest path.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>TSFA</th>
+            <th>AWS Forecast</th>
+            <th>Azure TSI</th>
+            <th>Nixtla TimeGPT</th>
+            <th>DIY (statsforecast)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Setup time</strong></td>
+            <td><span class="check">✓</span> &lt;5 min</td>
+            <td>Hours (IAM, S3, groups)</td>
+            <td>Hours (workspace)</td>
+            <td>Minutes</td>
+            <td>Days (infra + tuning)</td>
+          </tr>
+          <tr>
+            <td><strong>PRO-equivalent cost</strong></td>
+            <td><span class="check">✓</span> $49/month</td>
+            <td>$200–500+/month</td>
+            <td>$150–400+/month</td>
+            <td>$100+/month at 10K calls</td>
+            <td>$30–100/month + your time</td>
+          </tr>
+          <tr>
+            <td><strong>Confidence intervals</strong></td>
+            <td><span class="check">✓</span> 80% + 95%</td>
+            <td><span class="check">✓</span> Yes</td>
+            <td>Limited</td>
+            <td><span class="check">✓</span> Yes</td>
+            <td>Manual</td>
+          </tr>
+          <tr>
+            <td><strong>Zero-shot (no training)</strong></td>
+            <td><span class="check">✓</span> Chronos</td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="check">✓</span> TimeGPT</td>
+            <td><span class="cross">✗</span></td>
+          </tr>
+          <tr>
+            <td><strong>Public benchmarks</strong></td>
+            <td><span class="check">✓</span> Reproducible</td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="cross">✗</span></td>
+            <td>Partial</td>
+            <td>N/A</td>
+          </tr>
+          <tr>
+            <td><strong>Auto ARIMA fallback</strong></td>
+            <td><span class="check">✓</span> Automatic</td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="cross">✗</span></td>
+            <td><span class="cross">✗</span></td>
+            <td>Manual</td>
+          </tr>
+          <tr>
+            <td><strong>Multivariate (covariates)</strong></td>
+            <td>Phase 2</td>
+            <td><span class="check">✓</span> Yes</td>
+            <td><span class="check">✓</span> Yes</td>
+            <td><span class="check">✓</span> Yes</td>
+            <td>Manual</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:16px;font-size:13px;color:var(--muted);">
+      <strong style="color:var(--text);">Honest caveat:</strong>
+      TSFA does not yet support multivariate forecasting with covariates (Phase 2).
+      If you need exogenous variables today, Nixtla or AWS Forecast are better fits.
+    </p>
+  </div>
+</section>
 
-      <div class="plan">
-        <div class="plan-name">BASIC</div>
-        <div class="plan-price">$0<span>/month</span></div>
-        <div class="plan-volume">500 credits/month</div>
-        <ul class="plan-features">
-          <li>ARIMA + Chronos models</li>
-          <li>10 requests/minute</li>
-          <li>Univariate forecasting</li>
-          <li>Backtesting (/validate)</li>
-        </ul>
-        <a href="https://rapidapi.com/dorianmrt/api/tsfa" class="plan-btn" target="_blank" rel="noopener">
-          Start for free
-        </a>
+<!-- ═══════════════════════ USE CASES ═══════════════════════ -->
+<section id="use-cases">
+  <div class="container">
+    <div class="section-tag">Use cases</div>
+    <h2>Built for real forecasting problems</h2>
+    <p class="section-desc">Three domains where TSFA is production-ready today.</p>
+    <div class="cases">
+      <div class="case">
+        <span class="case-icon">📦</span>
+        <h3>Retail demand forecasting</h3>
+        <p>Forecast weekly demand for hundreds of SKUs simultaneously using the batch endpoint. Each product's history is independent — perfect for concurrent processing.</p>
+        <div class="detail">
+          <strong>Endpoint:</strong> <code>POST /v1/forecast/batch</code><br>
+          <strong>Model:</strong> <code>auto</code> (typically selects ARIMA on daily retail data)<br>
+          <strong>Cost:</strong> 1 credit × N products
+        </div>
       </div>
-
-      <div class="plan featured">
-        <div class="plan-badge">Most popular</div>
-        <div class="plan-name">PRO</div>
-        <div class="plan-price">$49<span>/month</span></div>
-        <div class="plan-volume">10,000 credits/month</div>
-        <ul class="plan-features">
-          <li>All models including LSTM</li>
-          <li>30 requests/minute</li>
-          <li>Batch: up to 50 series</li>
-          <li>Backtesting (/validate)</li>
-        </ul>
-        <a href="https://rapidapi.com/dorianmrt/api/tsfa" class="plan-btn" target="_blank" rel="noopener">
-          Subscribe
-        </a>
+      <div class="case">
+        <span class="case-icon">⚡</span>
+        <h3>Energy consumption prediction</h3>
+        <p>Forecast hourly electricity consumption for the next 24 hours. Use <code>frequency: "H"</code> and <code>horizon: 24</code>. The 80% prediction interval directly translates to reserve scheduling requirements.</p>
+        <div class="detail">
+          <strong>Endpoint:</strong> <code>POST /v1/forecast/univariate</code><br>
+          <strong>Model:</strong> <code>chronos</code> (zero-shot, handles hourly patterns)<br>
+          <strong>Benchmark:</strong> ARIMA achieves MAE=2.45 on ETT-h1 hourly data
+        </div>
       </div>
-
-      <div class="plan">
-        <div class="plan-name">ULTRA</div>
-        <div class="plan-price">$199<span>/month</span></div>
-        <div class="plan-volume">50,000 credits/month</div>
-        <ul class="plan-features">
-          <li>All models + ensemble</li>
-          <li>100 requests/minute</li>
-          <li>Batch: up to 500 series</li>
-          <li>Backtesting (/validate)</li>
-        </ul>
-        <a href="https://rapidapi.com/dorianmrt/api/tsfa" class="plan-btn" target="_blank" rel="noopener">
-          Subscribe
-        </a>
+      <div class="case">
+        <span class="case-icon">💹</span>
+        <h3>Financial time series</h3>
+        <p>Forecast FX rates, stock indices, or economic indicators. Exchange rate data is near-stationary — ARIMA achieves 1.13% MAPE on this type of series. Use <code>/v1/validate</code> to backtest before deploying in production.</p>
+        <div class="detail">
+          <strong>Endpoint:</strong> <code>POST /v1/forecast/univariate</code><br>
+          <strong>Model:</strong> <code>arima</code> (1.13% MAPE on FX benchmark)<br>
+          <strong>Validate first:</strong> <code>POST /v1/validate</code>
+        </div>
       </div>
-
-      <div class="plan">
-        <div class="plan-name">MEGA</div>
-        <div class="plan-price">$499<span>/month</span></div>
-        <div class="plan-volume">200,000 credits/month</div>
-        <ul class="plan-features">
-          <li>All models + ensemble</li>
-          <li>300 requests/minute</li>
-          <li>Batch: up to 500 series</li>
-          <li>Backtesting (/validate)</li>
-        </ul>
-        <a href="https://rapidapi.com/dorianmrt/api/tsfa" class="plan-btn" target="_blank" rel="noopener">
-          Subscribe
-        </a>
-      </div>
-
     </div>
   </div>
 </section>
 
-<!-- CODE EXAMPLE -->
+<!-- ═══════════════════════ ENDPOINTS ═══════════════════════ -->
+<section id="endpoints">
+  <div class="container">
+    <div class="section-tag">API Reference</div>
+    <h2>Endpoints</h2>
+    <p class="section-desc">Base URL: <code>https://api.eymdey-network.com/v1</code> — all requests require <code>X-RapidAPI-Key</code> header.</p>
+    <div class="endpoints">
+      <div class="endpoint">
+        <span class="method method-post">POST</span>
+        <div>
+          <div class="endpoint-path">/v1/forecast/univariate</div>
+          <div class="endpoint-desc">Forecast a single time series. Returns point forecast + 80%/95% prediction intervals + diagnostics. Minimum 10 observations, maximum 50,000. Horizon 1–365.</div>
+        </div>
+        <div class="endpoint-meta">
+          <span class="tag-green" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;padding:3px 10px;font-size:12px;color:var(--green);">All plans</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <span class="method method-post">POST</span>
+        <div>
+          <div class="endpoint-path">/v1/forecast/batch</div>
+          <div class="endpoint-desc">Forecast multiple series concurrently in a single request. Each series can have a different horizon. PRO: max 50 series. ULTRA/MEGA: max 500 series. Partial errors are isolated per series.</div>
+        </div>
+        <div class="endpoint-meta">
+          <span class="tag-yellow" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:4px;padding:3px 10px;font-size:12px;color:var(--yellow);">PRO+</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <span class="method method-post">POST</span>
+        <div>
+          <div class="endpoint-path">/v1/validate</div>
+          <div class="endpoint-desc">Sliding-window cross-validation (backtesting). Returns per-window MAE, RMSE, MAPE, sMAPE, and empirical 80%/95% prediction interval coverage. 1–20 windows.</div>
+        </div>
+        <div class="endpoint-meta">
+          <span class="tag-green" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;padding:3px 10px;font-size:12px;color:var(--green);">All plans</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <span class="method method-get">GET</span>
+        <div>
+          <div class="endpoint-path">/v1/models</div>
+          <div class="endpoint-desc">List all available models, their status (available / Phase 2), credit cost, and description.</div>
+        </div>
+        <div class="endpoint-meta">
+          <span class="tag-green" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;padding:3px 10px;font-size:12px;color:var(--green);">All plans</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <span class="method method-get">GET</span>
+        <div>
+          <div class="endpoint-path">/v1/usage</div>
+          <div class="endpoint-desc">Current billing period credit consumption: credits_used, credits_remaining, credits_limit, requests_count, period (YYYY-MM).</div>
+        </div>
+        <div class="endpoint-meta">
+          <span class="tag-green" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:4px;padding:3px 10px;font-size:12px;color:var(--green);">All plans</span>
+        </div>
+      </div>
+      <div class="endpoint">
+        <span class="method method-post">POST</span>
+        <div>
+          <div class="endpoint-path">/v1/forecast/multivariate</div>
+          <div class="endpoint-desc">Forecast with covariates using TiDE. <strong style="color:var(--yellow);">Phase 2 — returns HTTP 501 today.</strong> Coming in the next major release.</div>
+        </div>
+        <div class="endpoint-meta">
+          <span class="tag-red" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:3px 10px;font-size:12px;color:var(--red);">Phase 2</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ CODE EXAMPLES ═══════════════════════ -->
 <section id="code">
   <div class="container">
-    <div class="section-label">Code example</div>
-    <h2>Forecast in 10 lines of Python</h2>
-    <p class="section-desc">The complete call. No SDK. Just <code style="color:#60a5fa;font-size:14px">requests</code>.</p>
-    <div class="code-block-wrap">
-      <div class="code-header">
-        <span>Python</span>
-        <button onclick="copyCode()">Copy</button>
-      </div>
-      <pre id="code-snippet"><span class="kw">import</span> <span class="var">requests</span>
+    <div class="section-tag">Code examples</div>
+    <h2>Integrate in minutes</h2>
+    <p class="section-desc">Copy-paste examples for the three most common use cases. Replace <code>YOUR_KEY</code> with your RapidAPI key.</p>
 
-<span class="var">url</span> = <span class="str">"https://tsfa.p.rapidapi.com/v1/forecast/univariate"</span>
+    <div class="code-wrap">
+      <div class="code-tabs">
+        <div class="code-tab active" data-tab="python">Python</div>
+        <div class="code-tab" data-tab="js">JavaScript</div>
+        <div class="code-tab" data-tab="curl">cURL</div>
+        <button class="copy-btn" id="copy-btn">Copy</button>
+      </div>
+
+      <div class="code-panel active" id="panel-python">
+<pre><span class="kw">import</span> requests
+
+<span class="cmt"># Install: pip install requests</span>
+<span class="var">url</span> = <span class="str">"https://api.eymdey-network.com/v1/forecast/univariate"</span>
 <span class="var">headers</span> = {
-    <span class="str">"X-RapidAPI-Key"</span>: <span class="str">"YOUR_RAPIDAPI_KEY"</span>,
+    <span class="str">"X-RapidAPI-Key"</span>: <span class="str">"YOUR_KEY"</span>,
     <span class="str">"Content-Type"</span>: <span class="str">"application/json"</span>,
 }
 <span class="var">payload</span> = {
@@ -573,37 +1013,359 @@
     <span class="str">"horizon"</span>: <span class="num">7</span>,
     <span class="str">"frequency"</span>: <span class="str">"D"</span>,
     <span class="str">"model"</span>: <span class="str">"auto"</span>,
+    <span class="str">"confidence_levels"</span>: [<span class="num">0.80</span>, <span class="num">0.95</span>],
 }
-<span class="var">resp</span> = <span class="var">requests</span>.<span class="fn">post</span>(<span class="var">url</span>, json=<span class="var">payload</span>, headers=<span class="var">headers</span>)
+
+<span class="var">resp</span> = requests.<span class="fn">post</span>(<span class="var">url</span>, json=<span class="var">payload</span>, headers=<span class="var">headers</span>)
+<span class="var">resp</span>.<span class="fn">raise_for_status</span>()
 <span class="var">data</span> = <span class="var">resp</span>.<span class="fn">json</span>()
+
+<span class="fn">print</span>(<span class="var">data</span>[<span class="str">"model_used"</span>])             <span class="cmt"># "arima" or "chronos"</span>
 <span class="fn">print</span>(<span class="var">data</span>[<span class="str">"forecast"</span>][<span class="str">"mean"</span>])      <span class="cmt"># [176.3, 179.1, ...]</span>
-<span class="fn">print</span>(<span class="var">data</span>[<span class="str">"forecast"</span>][<span class="str">"lower_95"</span>])  <span class="cmt"># 95% lower bound</span>
-<span class="fn">print</span>(<span class="var">data</span>[<span class="str">"model_used"</span>])             <span class="cmt"># "arima" or "chronos"</span></pre>
+<span class="fn">print</span>(<span class="var">data</span>[<span class="str">"forecast"</span>][<span class="str">"lower_95"</span>]) <span class="cmt"># 95% lower bound</span>
+<span class="fn">print</span>(<span class="var">data</span>[<span class="str">"diagnostics"</span>][<span class="str">"trend"</span>])  <span class="cmt"># "upward"</span>
+<span class="fn">print</span>(<span class="var">data</span>[<span class="str">"meta"</span>][<span class="str">"credits_used"</span>]) <span class="cmt"># 1</span></pre>
+      </div>
+
+      <div class="code-panel" id="panel-js">
+<pre><span class="cmt">// Node.js or browser fetch</span>
+<span class="kw">const</span> <span class="var">resp</span> = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">"https://api.eymdey-network.com/v1/forecast/univariate"</span>, {
+  method: <span class="str">"POST"</span>,
+  headers: {
+    <span class="str">"X-RapidAPI-Key"</span>: <span class="str">"YOUR_KEY"</span>,
+    <span class="str">"Content-Type"</span>: <span class="str">"application/json"</span>,
+  },
+  body: <span class="fn">JSON.stringify</span>({
+    series: [<span class="num">120</span>, <span class="num">132</span>, <span class="num">128</span>, <span class="num">145</span>, <span class="num">139</span>, <span class="num">152</span>, <span class="num">148</span>, <span class="num">160</span>, <span class="num">155</span>, <span class="num">168</span>, <span class="num">163</span>, <span class="num">175</span>],
+    horizon: <span class="num">7</span>,
+    frequency: <span class="str">"D"</span>,
+    model: <span class="str">"auto"</span>,
+    confidence_levels: [<span class="num">0.80</span>, <span class="num">0.95</span>],
+  }),
+});
+
+<span class="kw">if</span> (!<span class="var">resp</span>.ok) <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">`HTTP </span>${<span class="var">resp</span>.status}<span class="str">`</span>);
+<span class="kw">const</span> <span class="var">data</span> = <span class="kw">await</span> <span class="var">resp</span>.<span class="fn">json</span>();
+
+console.<span class="fn">log</span>(<span class="var">data</span>.model_used);            <span class="cmt">// "arima"</span>
+console.<span class="fn">log</span>(<span class="var">data</span>.forecast.mean);         <span class="cmt">// [176.3, ...]</span>
+console.<span class="fn">log</span>(<span class="var">data</span>.forecast.lower_95);     <span class="cmt">// 95% lower bound</span>
+console.<span class="fn">log</span>(<span class="var">data</span>.diagnostics.trend);     <span class="cmt">// "upward"</span>
+console.<span class="fn">log</span>(<span class="var">data</span>.meta.credits_used);     <span class="cmt">// 1</span></pre>
+      </div>
+
+      <div class="code-panel" id="panel-curl">
+<pre><span class="cmt"># Basic forecast</span>
+curl -X POST <span class="str">"https://api.eymdey-network.com/v1/forecast/univariate"</span> \
+  -H <span class="str">"X-RapidAPI-Key: YOUR_KEY"</span> \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{
+    "series": [120, 132, 128, 145, 139, 152, 148, 160, 155, 168, 163, 175],
+    "horizon": 7,
+    "frequency": "D",
+    "model": "auto",
+    "confidence_levels": [0.80, 0.95]
+  }'</span>
+
+<span class="cmt"># Check your credit usage</span>
+curl <span class="str">"https://api.eymdey-network.com/v1/usage"</span> \
+  -H <span class="str">"X-RapidAPI-Key: YOUR_KEY"</span>
+
+<span class="cmt"># List available models</span>
+curl <span class="str">"https://api.eymdey-network.com/v1/models"</span> \
+  -H <span class="str">"X-RapidAPI-Key: YOUR_KEY"</span></pre>
+      </div>
+    </div>
+
+    <!-- Response sample -->
+    <h3 style="margin-top:40px;margin-bottom:16px;font-size:18px;">Response structure</h3>
+    <div class="code-wrap">
+      <div style="background:var(--bg3);border-bottom:1px solid var(--border);padding:10px 16px;font-size:13px;color:var(--muted);">JSON Response — POST /v1/forecast/univariate</div>
+<pre>{
+  <span class="key">"status"</span>: <span class="str">"success"</span>,
+  <span class="key">"model_used"</span>: <span class="str">"arima"</span>,                       <span class="cmt">// model that actually ran</span>
+  <span class="key">"forecast"</span>: {
+    <span class="key">"timestamps"</span>: [<span class="str">"2024-01-13"</span>, <span class="str">"2024-01-14"</span>, <span class="str">"..."</span>],
+    <span class="key">"mean"</span>:      [<span class="num">178.2</span>, <span class="num">181.5</span>, <span class="num">184.8</span>, <span class="str">"..."</span>],   <span class="cmt">// point forecast</span>
+    <span class="key">"lower_80"</span>:  [<span class="num">171.0</span>, <span class="num">173.5</span>, <span class="num">176.0</span>, <span class="str">"..."</span>],   <span class="cmt">// 80% lower bound</span>
+    <span class="key">"upper_80"</span>:  [<span class="num">185.4</span>, <span class="num">189.5</span>, <span class="num">193.6</span>, <span class="str">"..."</span>],   <span class="cmt">// 80% upper bound</span>
+    <span class="key">"lower_95"</span>:  [<span class="num">164.5</span>, <span class="num">166.8</span>, <span class="num">169.2</span>, <span class="str">"..."</span>],   <span class="cmt">// 95% lower bound</span>
+    <span class="key">"upper_95"</span>:  [<span class="num">191.9</span>, <span class="num">196.2</span>, <span class="num">200.4</span>, <span class="str">"..."</span>]    <span class="cmt">// 95% upper bound</span>
+  },
+  <span class="key">"diagnostics"</span>: {
+    <span class="key">"trend"</span>: <span class="str">"upward"</span>,                          <span class="cmt">// "upward" | "downward" | "stable"</span>
+    <span class="key">"seasonality_detected"</span>: <span class="kw">false</span>,
+    <span class="key">"seasonality_period"</span>: <span class="kw">null</span>,
+    <span class="key">"series_length"</span>: <span class="num">12</span>,
+    <span class="key">"missing_values"</span>: <span class="num">0</span>,
+    <span class="key">"stationarity"</span>: <span class="str">"non_stationary"</span>           <span class="cmt">// ADF test result</span>
+  },
+  <span class="key">"meta"</span>: {
+    <span class="key">"inference_time_ms"</span>: <span class="num">234.0</span>,
+    <span class="key">"request_id"</span>: <span class="str">"req_abc123"</span>,               <span class="cmt">// use in bug reports</span>
+    <span class="key">"credits_used"</span>: <span class="num">1</span>
+  }
+}</pre>
     </div>
   </div>
 </section>
 
-<!-- FOOTER -->
-<footer>
-  <div class="inner">
-    <div style="color: var(--muted); font-size: 13px;">
-      &copy; 2026 eymdey-network.com — TSFA v1.0.0
+<!-- ═══════════════════════ PRICING ═══════════════════════ -->
+<section id="pricing">
+  <div class="container">
+    <div class="section-tag">Pricing</div>
+    <h2>Simple, volume-based plans</h2>
+    <p class="section-desc">All plans include confidence intervals, diagnostics, and backtesting. Upgrade or cancel anytime via RapidAPI.</p>
+    <div class="pricing-grid">
+      <div class="plan">
+        <div class="plan-name">Basic</div>
+        <div class="plan-price">$0<span>/month</span></div>
+        <div class="plan-volume">500 credits/month · 10 req/min</div>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> ARIMA + Chronos models</li>
+          <li><span class="check">✓</span> Univariate forecasting</li>
+          <li><span class="check">✓</span> 80% + 95% intervals</li>
+          <li><span class="check">✓</span> Backtesting (/validate)</li>
+          <li><span class="check">✓</span> No credit card required</li>
+        </ul>
+        <a href="https://rapidapi.com/dorianmrt/api/tsfa" class="plan-btn" target="_blank" rel="noopener">Start for free</a>
+      </div>
+
+      <div class="plan featured">
+        <div class="popular-badge">Most popular</div>
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">$49<span>/month</span></div>
+        <div class="plan-volume">10,000 credits/month · 30 req/min</div>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> All models incl. LSTM</li>
+          <li><span class="check">✓</span> Batch forecasting (50 series)</li>
+          <li><span class="check">✓</span> 80% + 95% intervals</li>
+          <li><span class="check">✓</span> Backtesting (/validate)</li>
+          <li><span class="check">✓</span> Priority support</li>
+        </ul>
+        <a href="https://rapidapi.com/dorianmrt/api/tsfa" class="plan-btn" target="_blank" rel="noopener">Subscribe</a>
+      </div>
+
+      <div class="plan">
+        <div class="plan-name">Ultra</div>
+        <div class="plan-price">$199<span>/month</span></div>
+        <div class="plan-volume">50,000 credits/month · 100 req/min</div>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> All models + ensemble</li>
+          <li><span class="check">✓</span> Batch forecasting (500 series)</li>
+          <li><span class="check">✓</span> 80% + 95% intervals</li>
+          <li><span class="check">✓</span> Backtesting (/validate)</li>
+          <li><span class="check">✓</span> Priority support</li>
+        </ul>
+        <a href="https://rapidapi.com/dorianmrt/api/tsfa" class="plan-btn" target="_blank" rel="noopener">Subscribe</a>
+      </div>
+
+      <div class="plan">
+        <div class="plan-name">Mega</div>
+        <div class="plan-price">$499<span>/month</span></div>
+        <div class="plan-volume">200,000 credits/month · 300 req/min</div>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> All models + ensemble</li>
+          <li><span class="check">✓</span> Batch forecasting (500 series)</li>
+          <li><span class="check">✓</span> 80% + 95% intervals</li>
+          <li><span class="check">✓</span> Backtesting (/validate)</li>
+          <li><span class="check">✓</span> SLA + dedicated support</li>
+        </ul>
+        <a href="https://rapidapi.com/dorianmrt/api/tsfa" class="plan-btn" target="_blank" rel="noopener">Subscribe</a>
+      </div>
     </div>
-    <div class="links">
-      <a href="https://github.com/dorianmrt/tsfa" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://rapidapi.com/dorianmrt/api/tsfa" target="_blank" rel="noopener">RapidAPI</a>
-      <a href="mailto:contact@eymdey-network.com">Contact</a>
+
+    <div style="margin-top:28px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;font-size:14px;color:var(--muted);">
+      <strong style="color:var(--text);">Credit costs per call:</strong>
+      <code>arima</code> = 1 credit &nbsp;·&nbsp;
+      <code>chronos</code> = 1 credit &nbsp;·&nbsp;
+      <code>lstm</code> = 2 credits &nbsp;·&nbsp;
+      <code>ensemble</code> = 5 credits &nbsp;·&nbsp;
+      Batch = N series × model credits &nbsp;·&nbsp;
+      Validate = N windows × model credits
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ ERROR CODES ═══════════════════════ -->
+<section id="errors">
+  <div class="container">
+    <div class="section-tag">Error Reference</div>
+    <h2>Error codes</h2>
+    <p class="section-desc">All errors follow the same JSON structure: <code>{"status":"error","code":"...","message":"...","details":null}</code></p>
+    <div class="errors">
+      <div class="err err-4xx">
+        <span class="err-http" style="color:var(--yellow);">400</span>
+        <span class="err-code">VALIDATION_ERROR</span>
+        <span class="err-desc">Series contains NaN/Inf values, confidence level out of range (must be 0–1), or other input validation failure.</span>
+      </div>
+      <div class="err err-4xx">
+        <span class="err-http" style="color:var(--yellow);">403</span>
+        <span class="err-code">FORBIDDEN</span>
+        <span class="err-desc">Direct API access without going through the RapidAPI gateway (production only). Always use RapidAPI.</span>
+      </div>
+      <div class="err err-4xx">
+        <span class="err-http" style="color:var(--yellow);">403</span>
+        <span class="err-code">PLAN_RESTRICTION</span>
+        <span class="err-desc">Batch forecasting requires a PRO or ULTRA plan. Upgrade your subscription to access this endpoint.</span>
+      </div>
+      <div class="err err-4xx">
+        <span class="err-http" style="color:var(--yellow);">422</span>
+        <span class="err-code">SERIES_TOO_SHORT</span>
+        <span class="err-desc">Series is too short for the requested backtesting configuration. Minimum required = horizon × n_windows × 2.</span>
+      </div>
+      <div class="err err-4xx">
+        <span class="err-http" style="color:var(--yellow);">422</span>
+        <span class="err-code">TOO_MANY_SERIES</span>
+        <span class="err-desc">Batch request exceeds plan limit. PRO: 50 series max. ULTRA/MEGA: 500 series max.</span>
+      </div>
+      <div class="err err-4xx">
+        <span class="err-http" style="color:var(--red);">429</span>
+        <span class="err-code">RATE_LIMIT_EXCEEDED</span>
+        <span class="err-desc">Per-minute request rate exceeded. Response includes <code>Retry-After: 60</code> header. Slow down your requests.</span>
+      </div>
+      <div class="err err-4xx">
+        <span class="err-http" style="color:var(--red);">429</span>
+        <span class="err-code">CREDIT_LIMIT_EXCEEDED</span>
+        <span class="err-desc">Monthly credit quota exhausted. Resets at the start of the next billing period. Upgrade or wait.</span>
+      </div>
+      <div class="err err-5xx">
+        <span class="err-http" style="color:var(--muted);">501</span>
+        <span class="err-code">NOT_IMPLEMENTED</span>
+        <span class="err-desc">Feature not yet available (e.g., multivariate endpoint). Coming in Phase 2.</span>
+      </div>
+      <div class="err err-5xx">
+        <span class="err-http" style="color:var(--red);">503</span>
+        <span class="err-code">INFERENCE_TIMEOUT</span>
+        <span class="err-desc">GPU inference exceeded timeout. Safe to retry — the API will fall back to ARIMA on next attempt.</span>
+      </div>
+      <div class="err err-5xx">
+        <span class="err-http" style="color:var(--red);">503</span>
+        <span class="err-code">MODAL_UNAVAILABLE</span>
+        <span class="err-desc">GPU backend unreachable. In most cases the API automatically falls back to ARIMA (200 with <code>fallback_used: true</code>).</span>
+      </div>
+      <div class="err err-5xx">
+        <span class="err-http" style="color:var(--red);">500</span>
+        <span class="err-code">INTERNAL_SERVER_ERROR</span>
+        <span class="err-desc">Unexpected server error. Retry after a few seconds. If the error persists, contact support with the <code>request_id</code>.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ FAQ ═══════════════════════ -->
+<section id="faq">
+  <div class="container">
+    <div class="section-tag">FAQ</div>
+    <h2>Frequently asked questions</h2>
+    <p class="section-desc" style="margin-bottom:32px;">Answers to the most common questions.</p>
+    <div class="faq">
+
+      <div class="faq-item">
+        <div class="faq-q">What is a "credit"? Is it the same as a request? <span class="arrow">+</span></div>
+        <div class="faq-a">A credit is a unit of compute, not a request. One call to ARIMA or Chronos costs 1 credit. LSTM costs 2 credits. Ensemble costs 5 credits. A batch call to 10 series with ARIMA costs 10 credits. A backtest with 5 windows and ARIMA costs 5 credits. If you only use ARIMA, credits = requests.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">What happens if Chronos/LSTM is unavailable? <span class="arrow">+</span></div>
+        <div class="faq-a">The API automatically falls back to ARIMA. The response still returns HTTP 200 but includes <code>"fallback_used": true</code> in the meta section. You are only charged 1 credit (ARIMA cost), not the GPU model cost. Your request always completes.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">What frequency codes are supported? <span class="arrow">+</span></div>
+        <div class="faq-a">Supported values: <code>T</code> (minute), <code>H</code> (hourly), <code>D</code> (daily), <code>W</code> (weekly), <code>M</code> (monthly), <code>Q</code> (quarterly), <code>Y</code> (yearly), <code>auto</code> (infer from timestamps). Pass <code>"auto"</code> if you provide timestamps in ISO 8601 format and want the API to detect frequency automatically.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">How many historical observations do I need? <span class="arrow">+</span></div>
+        <div class="faq-a">Minimum 10 observations, maximum 50,000. For ARIMA, 30–100 observations is typically sufficient. For Chronos, the model is zero-shot and works on as few as 10 observations. LSTM benefits from 500+ observations with clear seasonal patterns. The <code>/v1/validate</code> endpoint will tell you how well the chosen model performs on your specific data length.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Can I use my own timestamps? <span class="arrow">+</span></div>
+        <div class="faq-a">Yes. Pass an optional <code>timestamps</code> array of ISO 8601 strings (e.g. <code>["2024-01-01", "2024-01-08"]</code>) aligned with your <code>series</code> array. The response <code>forecast.timestamps</code> will then continue from the last observed date at the correct interval. Without timestamps, the response still returns relative step indices.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Do credits reset every month? <span class="arrow">+</span></div>
+        <div class="faq-a">Yes. Credits reset at the start of each calendar month aligned with your RapidAPI billing cycle. Unused credits do not roll over. The <code>GET /v1/usage</code> endpoint shows your current period, credits_used, credits_remaining, and credits_limit.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-q">Is there a trial period before paying? <span class="arrow">+</span></div>
+        <div class="faq-a">Yes — the BASIC plan is permanently free (no credit card required). It gives you 500 credits/month with access to ARIMA and Chronos. You can test the full API, including backtesting, before subscribing to a paid plan.</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ FOOTER ═══════════════════════ -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <span class="logo">TS<em>FA</em></span>
+        <p>Time Series Forecasting API. ARIMA, Chronos-T5, and LSTM models behind a single REST endpoint. Hosted on Hetzner VPS, GPU inference on Modal.com.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="#models">Models</a></li>
+          <li><a href="#benchmarks">Benchmarks</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#endpoints">API Reference</a></li>
+          <li><a href="#errors">Error codes</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="https://rapidapi.com/dorianmrt/api/tsfa" target="_blank" rel="noopener">RapidAPI listing</a></li>
+          <li><a href="https://github.com/dorianmrt/tsfa" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://github.com/dorianmrt/tsfa/blob/main/benchmarks/results/README.md" target="_blank" rel="noopener">Benchmark results</a></li>
+          <li><a href="#faq">FAQ</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="mailto:contact@eymdey-network.com">contact@eymdey-network.com</a></li>
+          <li><a href="https://rapidapi.com/dorianmrt/api/tsfa" target="_blank" rel="noopener">Support (RapidAPI)</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 eymdey-network.com — TSFA v1.0.0</span>
+      <span>Built by <a href="https://eymdey-network.com" target="_blank" rel="noopener">Dorian Marty</a></span>
     </div>
   </div>
 </footer>
 
 <script>
-  function copyCode() {
-    const raw = `import requests
+  // ── Mobile nav ──
+  document.getElementById('hamburger').addEventListener('click', function() {
+    document.getElementById('nav-links').classList.toggle('open');
+  });
 
-url = "https://tsfa.p.rapidapi.com/v1/forecast/univariate"
+  // ── Code tabs ──
+  document.querySelectorAll('.code-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      var id = this.dataset.tab;
+      document.querySelectorAll('.code-tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.code-panel').forEach(function(p) { p.classList.remove('active'); });
+      this.classList.add('active');
+      document.getElementById('panel-' + id).classList.add('active');
+    });
+  });
+
+  // ── Copy button ──
+  var codeTexts = {
+    python: `import requests
+
+url = "https://api.eymdey-network.com/v1/forecast/univariate"
 headers = {
-    "X-RapidAPI-Key": "YOUR_RAPIDAPI_KEY",
+    "X-RapidAPI-Key": "YOUR_KEY",
     "Content-Type": "application/json",
 }
 payload = {
@@ -611,18 +1373,62 @@ payload = {
     "horizon": 7,
     "frequency": "D",
     "model": "auto",
+    "confidence_levels": [0.80, 0.95],
 }
+
 resp = requests.post(url, json=payload, headers=headers)
+resp.raise_for_status()
 data = resp.json()
+
+print(data["model_used"])
 print(data["forecast"]["mean"])
 print(data["forecast"]["lower_95"])
-print(data["model_used"])`;
-    navigator.clipboard.writeText(raw).then(function() {
-      const btn = document.querySelector('.code-header button');
+print(data["diagnostics"]["trend"])
+print(data["meta"]["credits_used"])`,
+
+    js: `const resp = await fetch("https://api.eymdey-network.com/v1/forecast/univariate", {
+  method: "POST",
+  headers: {
+    "X-RapidAPI-Key": "YOUR_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    series: [120, 132, 128, 145, 139, 152, 148, 160, 155, 168, 163, 175],
+    horizon: 7,
+    frequency: "D",
+    model: "auto",
+    confidence_levels: [0.80, 0.95],
+  }),
+});
+const data = await resp.json();
+console.log(data.forecast.mean);`,
+
+    curl: `curl -X POST "https://api.eymdey-network.com/v1/forecast/univariate" \\
+  -H "X-RapidAPI-Key: YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "series": [120, 132, 128, 145, 139, 152, 148, 160, 155, 168, 163, 175],
+    "horizon": 7,
+    "frequency": "D",
+    "model": "auto"
+  }'`
+  };
+
+  document.getElementById('copy-btn').addEventListener('click', function() {
+    var active = document.querySelector('.code-tab.active').dataset.tab;
+    navigator.clipboard.writeText(codeTexts[active]).then(function() {
+      var btn = document.getElementById('copy-btn');
       btn.textContent = 'Copied!';
       setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
     });
-  }
+  });
+
+  // ── FAQ accordion ──
+  document.querySelectorAll('.faq-q').forEach(function(q) {
+    q.addEventListener('click', function() {
+      this.parentElement.classList.toggle('open');
+    });
+  });
 </script>
 
 </body>

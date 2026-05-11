@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>TSFA — RapidAPI Spotlights</title>
+  <style>
+    @page { size: A4; margin: 28mm 24mm; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 12pt;
+      line-height: 1.6;
+      color: #1a1a2e;
+      background: #fff;
+    }
+
+    .page-header {
+      border-bottom: 3px solid #3b82f6;
+      padding-bottom: 14px;
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-size: 22pt;
+      font-weight: 800;
+      color: #1a1a2e;
+      letter-spacing: -0.5px;
+    }
+    .page-header h1 em { color: #3b82f6; font-style: normal; }
+    .page-header .sub {
+      font-size: 10pt;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    .purpose-note {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 10pt;
+      color: #1e40af;
+      margin-bottom: 32px;
+    }
+    .purpose-note strong { color: #1e3a8a; }
+
+    h2 {
+      font-size: 14pt;
+      font-weight: 800;
+      color: #111827;
+      margin-bottom: 20px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .spotlight {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-left: 4px solid #3b82f6;
+      border-radius: 6px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      page-break-inside: avoid;
+    }
+    .spotlight-num {
+      font-size: 9pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #3b82f6;
+      margin-bottom: 8px;
+    }
+
+    .field { margin-bottom: 14px; }
+    .field-label {
+      font-size: 9pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+    .field-value {
+      font-size: 12pt;
+      font-weight: 600;
+      color: #111827;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      padding: 8px 12px;
+    }
+    .field-value.body-text {
+      font-weight: 400;
+      font-size: 11pt;
+      line-height: 1.55;
+    }
+    .char-count {
+      font-size: 9pt;
+      color: #9ca3af;
+      margin-top: 3px;
+    }
+
+    .constraints {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin-top: 8px;
+    }
+    .constraints p {
+      font-size: 10pt;
+      color: #166534;
+      margin-bottom: 4px;
+    }
+    .constraints p:last-child { margin-bottom: 0; }
+
+    .section-break { margin: 36px 0; border-top: 1px dashed #d1d5db; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10pt;
+      margin-top: 8px;
+    }
+    th {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      padding: 7px 12px;
+      text-align: left;
+      font-weight: 700;
+      color: #374151;
+    }
+    td {
+      border: 1px solid #e5e7eb;
+      padding: 7px 12px;
+      color: #1f2937;
+    }
+
+    .footer-note {
+      margin-top: 40px;
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
+      font-size: 9pt;
+      color: #9ca3af;
+      text-align: center;
+    }
+
+    @media print {
+      .no-print { display: none; }
+      .spotlight { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>TS<em>FA</em> — RapidAPI Spotlights</h1>
+  <div class="sub">Time Series Forecasting API · workspace: dorianmrt · v1.0.0 · eymdey-network.com</div>
+</div>
+
+<div class="purpose-note">
+  <strong>Purpose of this document:</strong>
+  This PDF contains the three spotlight entries for the TSFA RapidAPI listing.
+  Each spotlight has a <strong>title (max 40 characters)</strong> and a
+  <strong>description (max 120 characters)</strong>, ready to copy-paste into the RapidAPI submission form.
+  The detailed body text below each spotlight is for context only — do not paste it into the character-limited fields.
+</div>
+
+<h2>Spotlight Entries — Copy-Paste Fields</h2>
+
+<!-- ═══ SPOTLIGHT 1 ═══ -->
+<div class="spotlight">
+  <div class="spotlight-num">Spotlight 1 of 3 — Models</div>
+
+  <div class="field">
+    <div class="field-label">Title <span style="font-weight:400;color:#9ca3af;">(max 40 chars)</span></div>
+    <div class="field-value">Three models, one endpoint</div>
+    <div class="char-count">26 / 40 characters</div>
+  </div>
+
+  <div class="field">
+    <div class="field-label">Description <span style="font-weight:400;color:#9ca3af;">(max 120 chars)</span></div>
+    <div class="field-value">ARIMA for speed, Chronos-T5 for zero-shot generality, LSTM for long series. Auto-selection included.</div>
+    <div class="char-count">100 / 120 characters</div>
+  </div>
+
+  <div class="field">
+    <div class="field-label">Context / Extended description <span style="font-weight:400;color:#9ca3af;">(do not paste in RapidAPI — for PDF context only)</span></div>
+    <div class="field-value body-text">
+      TSFA exposes three production-ready forecasting models behind a single REST endpoint:
+      <br><br>
+      • <strong>ARIMA</strong> (AutoARIMA via statsforecast) — runs locally on CPU. Best for short series
+        (&lt;200 observations), interpretable output, and fast turnaround (&lt;300ms). 1 credit/call.
+      <br><br>
+      • <strong>Chronos-T5-Small</strong> (Amazon Foundation Model, GPU via Modal.com) — zero-shot, works
+        on any domain and any frequency without training. 1 credit/call.
+      <br><br>
+      • <strong>LSTM</strong> (Custom PyTorch, GPU via Modal.com) — for long series (&gt;500 obs) with
+        strong seasonal patterns. 2 credits/call.
+      <br><br>
+      Pass <code>"model": "auto"</code> to let the API select the best model automatically.
+      If the GPU backend is unavailable, the API silently falls back to ARIMA.
+    </div>
+  </div>
+
+  <div class="constraints">
+    <p><strong>Credit cost:</strong> arima = 1, chronos = 1, lstm = 2, ensemble = 5</p>
+    <p><strong>Fallback:</strong> Automatic ARIMA fallback if GPU (Modal.com) is unreachable</p>
+    <p><strong>Coming (Phase 2):</strong> TiDE model for multivariate forecasting with covariates</p>
+  </div>
+</div>
+
+<!-- ═══ SPOTLIGHT 2 ═══ -->
+<div class="spotlight">
+  <div class="spotlight-num">Spotlight 2 of 3 — Benchmarks</div>
+
+  <div class="field">
+    <div class="field-label">Title <span style="font-weight:400;color:#9ca3af;">(max 40 chars)</span></div>
+    <div class="field-value">Public benchmarks, real numbers</div>
+    <div class="char-count">31 / 40 characters</div>
+  </div>
+
+  <div class="field">
+    <div class="field-label">Description <span style="font-weight:400;color:#9ca3af;">(max 120 chars)</span></div>
+    <div class="field-value">Evaluated on ETT-h1, Exchange Rate, M5. Results published and reproducible — no cherry-picked metrics.</div>
+    <div class="char-count">101 / 120 characters</div>
+  </div>
+
+  <div class="field">
+    <div class="field-label">Context / Benchmark Results Table <span style="font-weight:400;color:#9ca3af;">(do not paste in RapidAPI)</span></div>
+    <div class="field-value body-text">
+      All benchmarks use rolling-window backtesting (5 windows per dataset).
+      Source: <code>benchmarks/results/benchmark_results.json</code> — reproducible with the published benchmark runner.
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Dataset</th>
+          <th>Domain</th>
+          <th>Model</th>
+          <th>Horizon</th>
+          <th>MAE</th>
+          <th>RMSE</th>
+          <th>MAPE</th>
+          <th>sMAPE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>ETT-h1</td>
+          <td>Electricity (hourly)</td>
+          <td>arima</td>
+          <td>24h</td>
+          <td>2.4524</td>
+          <td>2.9405</td>
+          <td>10.12%</td>
+          <td>10.74%</td>
+        </tr>
+        <tr>
+          <td>Exchange Rate</td>
+          <td>Finance / FX (daily)</td>
+          <td>arima</td>
+          <td>30d</td>
+          <td>0.0085</td>
+          <td>0.0100</td>
+          <td>1.13%</td>
+          <td>1.13%</td>
+        </tr>
+        <tr>
+          <td>M5-sample</td>
+          <td>Retail demand (daily)</td>
+          <td>arima</td>
+          <td>14d</td>
+          <td>9.0427</td>
+          <td>10.5617</td>
+          <td>7.63%</td>
+          <td>7.43%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ SPOTLIGHT 3 ═══ -->
+<div class="spotlight">
+  <div class="spotlight-num">Spotlight 3 of 3 — Developer Experience</div>
+
+  <div class="field">
+    <div class="field-label">Title <span style="font-weight:400;color:#9ca3af;">(max 40 chars)</span></div>
+    <div class="field-value">No setup, one POST call</div>
+    <div class="char-count">23 / 40 characters</div>
+  </div>
+
+  <div class="field">
+    <div class="field-label">Description <span style="font-weight:400;color:#9ca3af;">(max 120 chars)</span></div>
+    <div class="field-value">Send a JSON array, get forecasts with 80%/95% intervals back. No training, no infra, no SDK required.</div>
+    <div class="char-count">101 / 120 characters</div>
+  </div>
+
+  <div class="field">
+    <div class="field-label">Context / Quick Start Code <span style="font-weight:400;color:#9ca3af;">(do not paste in RapidAPI)</span></div>
+    <div class="field-value body-text" style="font-family: monospace; font-size: 10pt; line-height: 1.8;">
+import requests<br>
+<br>
+url = "https://api.eymdey-network.com/v1/forecast/univariate"<br>
+headers = {"X-RapidAPI-Key": "YOUR_KEY", "Content-Type": "application/json"}<br>
+payload = {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"series": [120, 132, 128, 145, 139, 152, 148, 160, 155, 168, 163, 175],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"horizon": 7,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"frequency": "D",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"model": "auto",<br>
+}<br>
+resp = requests.post(url, json=payload, headers=headers)<br>
+data = resp.json()<br>
+print(data["forecast"]["mean"])   # [176.3, 179.1, ...]<br>
+print(data["forecast"]["lower_95"])  # 95% lower bound
+    </div>
+  </div>
+
+  <div class="constraints">
+    <p><strong>No SDK required:</strong> Standard HTTP — works with requests, curl, fetch, HTTPClient</p>
+    <p><strong>No training:</strong> Send raw data, receive forecasts. Zero model management</p>
+    <p><strong>165 tests passing:</strong> Unit + integration test suite, production-grade error handling</p>
+  </div>
+</div>
+
+<div class="section-break"></div>
+
+<h2>Summary — Character Count Verification</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Spotlight</th>
+      <th>Title (max 40)</th>
+      <th>Title chars</th>
+      <th>Description (max 120)</th>
+      <th>Desc chars</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1 — Models</td>
+      <td>Three models, one endpoint</td>
+      <td style="text-align:center;">26 ✓</td>
+      <td>ARIMA for speed, Chronos-T5 for zero-shot generality, LSTM for long series. Auto-selection included.</td>
+      <td style="text-align:center;">100 ✓</td>
+    </tr>
+    <tr>
+      <td>2 — Benchmarks</td>
+      <td>Public benchmarks, real numbers</td>
+      <td style="text-align:center;">31 ✓</td>
+      <td>Evaluated on ETT-h1, Exchange Rate, M5. Results published and reproducible — no cherry-picked metrics.</td>
+      <td style="text-align:center;">101 ✓</td>
+    </tr>
+    <tr>
+      <td>3 — Dev experience</td>
+      <td>No setup, one POST call</td>
+      <td style="text-align:center;">23 ✓</td>
+      <td>Send a JSON array, get forecasts with 80%/95% intervals back. No training, no infra, no SDK required.</td>
+      <td style="text-align:center;">101 ✓</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="footer-note">
+  TSFA v1.0.0 · dorianmrt · eymdey-network.com · Generated 2026-05-11
+  <br>
+  To export as PDF: open this file in a browser → File → Print → Save as PDF (set margins to None or Minimum)
+</div>
+
+</body>
+</html>
